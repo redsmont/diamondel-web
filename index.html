@@ -148,6 +148,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15
 .pr-stock{font-family:var(--mono);color:var(--text-subtle);font-size:12px}
 .pr-instock{color:#047857;font-weight:600}
 .pr-moq{font-family:var(--mono);color:var(--text-muted);font-size:12px;white-space:nowrap}
+.pr-price{font-family:var(--mono);color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
+.pr-breaks{display:inline-block;margin-left:6px;font-size:10px;font-weight:400;color:var(--text-subtle);background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:4px;padding:1px 5px;vertical-align:middle;cursor:help}
 .pr-qty-in{width:100%;border:1px solid var(--border);border-radius:6px;
   padding:6px 10px;font-size:13px;font-family:var(--mono);
   color:var(--text);outline:none;background:#fff;transition:border-color .15s}
@@ -962,6 +964,12 @@ function setMode(m){
 
 function fill(v){document.getElementById('main-search').value=v;doSearch();}
 
+function fmtPrice(p,cur){
+  if(p==null||isNaN(p))return '—';
+  const sym=cur==='USD'?'$':(cur==='EUR'?'€':(cur?cur+' ':'$'));
+  return sym+Number(p).toFixed(4).replace(/\.?0+$/,'').replace(/\.$/,'.00');
+}
+
 function tableHead(){
   return '<thead><tr>'+
     '<th style="width:36px"></th>'+
@@ -969,6 +977,7 @@ function tableHead(){
     '<th>'+(lang==='zh'?'製造商 / 封裝':'Mfr / Pkg')+'</th>'+
     '<th style="width:110px">'+(lang==='zh'?'現貨':'Stock')+'</th>'+
     '<th style="width:90px">'+(lang==='zh'?'MOQ':'MOQ')+'</th>'+
+    (ADMIN?'<th style="width:110px">'+(lang==='zh'?'單價':'Unit Price')+'</th>':'')+
     '<th style="width:120px">'+(lang==='zh'?'需求量':'Qty Needed')+'</th>'+
     '</tr></thead>';
 }
@@ -978,12 +987,16 @@ function renderPartRow(p,idx){
   const inStock=qty>0;
   const stockTxt=inStock?qty.toLocaleString():(lang==='zh'?'無庫存':'Out');
   const moqTxt=(p.moq||1)+(p.leadWeeks?' · '+p.leadWeeks+'W':'');
+  const breaks=p.priceBreaks||[];
+  const priceTitle=breaks.length?breaks.map(b=>b.qty+': '+fmtPrice(b.price,p.currency)).join(' | '):'';
+  const priceCell=ADMIN?'<td class="pr-price" title="'+priceTitle+'">'+fmtPrice(p.unitPrice,p.currency)+(breaks.length>1?'<span class="pr-breaks">'+breaks.length+(lang==='zh'?' 階':' tiers')+'</span>':'')+'</td>':'';
   return '<tr class="pr-row'+(inStock?'':' pr-out')+'">'+
     '<td class="pr-chk"><input type="checkbox" class="pr-sel" data-idx="'+idx+'"'+(inStock?'':' disabled')+'></td>'+
     '<td class="pr-pn">'+(p.partNumber||'')+'</td>'+
     '<td class="pr-mfr">'+(p.manufacturer||'')+(p.packageType?'<div class="pr-pkg">'+p.packageType+'</div>':'')+'</td>'+
     '<td class="pr-stock'+(inStock?' pr-instock':'')+'">'+stockTxt+'</td>'+
     '<td class="pr-moq">'+moqTxt+'</td>'+
+    priceCell+
     '<td class="pr-qty"><input type="number" class="pr-qty-in" data-idx="'+idx+'" min="1" placeholder="'+(lang==='zh'?'數量':'Qty')+'"'+(inStock?'':' disabled')+'></td>'+
     '</tr>';
 }
