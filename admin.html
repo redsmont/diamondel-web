@@ -128,6 +128,50 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:15
   border-left:3px solid var(--orange);border-radius:4px}
 .src-label{font-size:13px;font-weight:600;color:var(--orange);letter-spacing:.3px}
 .src-count{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
+
+/* RESULT TABLE */
+.pr-table{width:100%;border-collapse:collapse;background:#fff;
+  border:1px solid var(--border);border-radius:8px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(10,22,40,0.04)}
+.pr-table th{background:var(--bg-soft);font-size:10px;font-weight:700;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;
+  padding:10px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.pr-table td{padding:10px 12px;font-size:13px;
+  border-bottom:1px solid var(--border-soft);color:var(--text);vertical-align:middle}
+.pr-table tr:last-child td{border-bottom:none}
+.pr-table tbody tr:hover td{background:var(--bg-tint)}
+.pr-chk{text-align:center}
+.pr-chk input{width:16px;height:16px;cursor:pointer;accent-color:var(--orange)}
+.pr-pn{font-family:var(--mono);font-weight:500;color:var(--text);font-size:13px}
+.pr-mfr{color:var(--text-muted);font-size:12px}
+.pr-pkg{font-size:11px;color:var(--text-subtle);margin-top:2px;font-family:var(--mono)}
+.pr-stock{font-family:var(--mono);color:var(--text-subtle);font-size:12px}
+.pr-instock{color:#047857;font-weight:600}
+.pr-moq{font-family:var(--mono);color:var(--text-muted);font-size:12px;white-space:nowrap}
+.pr-qty-in{width:100%;border:1px solid var(--border);border-radius:6px;
+  padding:6px 10px;font-size:13px;font-family:var(--mono);
+  color:var(--text);outline:none;background:#fff;transition:border-color .15s}
+.pr-qty-in:focus{border-color:var(--orange)}
+.pr-qty-in:disabled{background:var(--bg-soft);color:var(--text-subtle);cursor:not-allowed}
+.pr-out td{color:var(--text-subtle)}
+.pr-out .pr-pn{color:var(--text-muted)}
+
+/* BULK INQUIRY BAR */
+.bulk-bar{background:var(--bg-soft);border:1px solid var(--border);
+  border-radius:10px;padding:16px 18px;margin-top:16px}
+.bulk-label{display:block;font-size:11px;font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.bulk-notes{width:100%;border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;font-family:var(--font);font-size:13px;color:var(--text);
+  outline:none;resize:vertical;min-height:64px;background:#fff;
+  transition:border-color .15s,box-shadow .15s}
+.bulk-notes:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(249,115,22,0.1)}
+.bulk-footer{display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-top:12px;flex-wrap:wrap}
+.bulk-hint{font-size:11px;color:var(--text-muted);flex:1;min-width:0}
+.bulk-btn{width:auto!important;padding:10px 24px!important;margin-top:0!important;
+  font-size:13px!important;white-space:nowrap}
+
 .part-card{background:#fff;border:1px solid var(--border);
   border-radius:12px;overflow:hidden;margin-bottom:12px;transition:border-color .2s,box-shadow .2s}
 .part-card:hover{border-color:var(--orange);box-shadow:0 4px 16px rgba(249,115,22,0.08)}
@@ -894,6 +938,7 @@ const ADMIN=/admin/i.test(window.location.pathname);
 const API_BASE='https://diamondel-api.vercel.app';
 const ADMIN_TOKEN_KEY='diamondelAdminToken';
 function getAdminToken(){return localStorage.getItem(ADMIN_TOKEN_KEY)||'';}
+let lastResults=[];
 let currentPart='';
 let lang='zh';
 let mode='guest';
@@ -917,17 +962,48 @@ function setMode(m){
 
 function fill(v){document.getElementById('main-search').value=v;doSearch();}
 
-function renderSourceSection(label,src){
+function tableHead(){
+  return '<thead><tr>'+
+    '<th style="width:36px"></th>'+
+    '<th>'+(lang==='zh'?'料號':'Part No.')+'</th>'+
+    '<th>'+(lang==='zh'?'製造商 / 封裝':'Mfr / Pkg')+'</th>'+
+    '<th style="width:110px">'+(lang==='zh'?'現貨':'Stock')+'</th>'+
+    '<th style="width:90px">'+(lang==='zh'?'MOQ':'MOQ')+'</th>'+
+    '<th style="width:120px">'+(lang==='zh'?'需求量':'Qty Needed')+'</th>'+
+    '</tr></thead>';
+}
+
+function renderPartRow(p,idx){
+  const qty=p.quantity||0;
+  const inStock=qty>0;
+  const stockTxt=inStock?qty.toLocaleString():(lang==='zh'?'無庫存':'Out');
+  const moqTxt=(p.moq||1)+(p.leadWeeks?' · '+p.leadWeeks+'W':'');
+  return '<tr class="pr-row'+(inStock?'':' pr-out')+'">'+
+    '<td class="pr-chk"><input type="checkbox" class="pr-sel" data-idx="'+idx+'"'+(inStock?'':' disabled')+'></td>'+
+    '<td class="pr-pn">'+(p.partNumber||'')+'</td>'+
+    '<td class="pr-mfr">'+(p.manufacturer||'')+(p.packageType?'<div class="pr-pkg">'+p.packageType+'</div>':'')+'</td>'+
+    '<td class="pr-stock'+(inStock?' pr-instock':'')+'">'+stockTxt+'</td>'+
+    '<td class="pr-moq">'+moqTxt+'</td>'+
+    '<td class="pr-qty"><input type="number" class="pr-qty-in" data-idx="'+idx+'" min="1" placeholder="'+(lang==='zh'?'數量':'Qty')+'"'+(inStock?'':' disabled')+'></td>'+
+    '</tr>';
+}
+
+function renderTable(parts,startIdx){
+  const rows=parts.map((p,i)=>renderPartRow(p,startIdx+i)).join('');
+  return '<table class="pr-table">'+tableHead()+'<tbody>'+rows+'</tbody></table>';
+}
+
+function renderSourceSection(label,src,startIdx){
   const rows=src.results||[];
   const err=src.error;
   const countTxt=err?(lang==='zh'?'錯誤':'Error'):(rows.length+(lang==='zh'?' 筆':' results'));
   let body;
   if(err){
-    body='<div style="padding:20px;color:rgba(239,68,68,0.7);font-size:13px">⚠️ '+err+'</div>';
+    body='<div style="padding:16px;color:#b91c1c;font-size:13px;background:rgba(239,68,68,0.05);border-radius:6px">⚠️ '+err+'</div>';
   } else if(rows.length===0){
-    body='<div style="padding:20px;color:var(--text-muted);font-size:13px">'+(lang==='zh'?'此來源查無資料':'No results from this source')+'</div>';
+    body='<div style="padding:16px;color:var(--text-muted);font-size:13px">'+(lang==='zh'?'此來源查無資料':'No results from this source')+'</div>';
   } else {
-    body=rows.map(renderPartCard).join('');
+    body=renderTable(rows,startIdx);
   }
   return '<div class="src-section">'+
     '<div class="src-head"><span class="src-label">'+label+'</span>'+
@@ -935,47 +1011,42 @@ function renderSourceSection(label,src){
     body+'</div>';
 }
 
-function renderPartCard(p){
-  const inStock=p.quantity>0;
-  const spqStr=p.spq?'SPQ：'+p.spq.toLocaleString()+(p.packageType?' / '+p.packageType:''):'';
-  return `<div class="part-card">
-    <div class="pc-head">
-      <div>
-        <div class="pc-pn">${p.partNumber||''}</div>
-        <div class="pc-mfr">${p.manufacturer||''}${p.packageType?' · '+p.packageType:''}</div>
-        ${spqStr?'<div class="pc-spq"><b>SPQ：</b>'+p.spq+(p.packageType?' / '+p.packageType:'')+'</div>':''}
-        <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">${p.description||''}</div>
-      </div>
-      <span class="stock-tag" style="${inStock?'':'background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.25)'}">${inStock?(lang==='zh'?'現貨':'In Stock'):(lang==='zh'?'無庫存':'Out of Stock')}</span>
-    </div>
-    <div class="pc-row">
-      <span class="pc-dot" style="${inStock?'':'background:#f87171'}"></span>
-      <div class="pc-data">
-        <div class="pc-block"><span class="pc-key">QTY</span><span class="pc-val">${p.quantity>0?p.quantity.toLocaleString():'0'}</span></div>
-        <div class="pc-sep"></div>
-        <div class="pc-block"><span class="pc-key">MOQ</span><span class="pc-val">${p.moq||1}</span></div>
-        ${p.leadWeeks?'<div class="pc-sep"></div><div class="pc-block"><span class="pc-key">LEAD</span><span class="pc-val">'+p.leadWeeks+'W</span></div>':''}
-      </div>
-      <span class="pc-lock">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        ${lang==='zh'?'價格請洽業務':'Price on request'}
-      </span>
-    </div>
-    <div class="pc-inquiry">
-      <div class="inquiry-row">
-        <span class="inq-label">${lang==='zh'?'需求量':'Qty'}</span>
-        <input class="inq-input" type="number" placeholder="${lang==='zh'?'請輸入需求數量（pcs）':'Required quantity (pcs)'}">
-      </div>
-      <div class="inquiry-row" style="align-items:flex-start">
-        <span class="inq-label" style="padding-top:6px">${lang==='zh'?'備註':'Notes'}</span>
-        <textarea class="inq-textarea" placeholder="${lang==='zh'?'交期、包裝、認證或其他需求...':'Lead time, packaging, certifications...'}"></textarea>
-      </div>
-      <div class="inq-footer">
-        <span class="inq-hint">${lang==='zh'?'送出後業務 2 小時內回覆':'Team responds within 2 hours'}</span>
-        <button class="inq-btn" onclick="openInqModal('${p.partNumber}')">${lang==='zh'?'送出詢價':'Submit Inquiry'}</button>
-      </div>
-    </div>
-  </div>`;
+function bulkBar(){
+  return '<div class="bulk-bar">'+
+    '<label class="bulk-label">'+(lang==='zh'?'備註（交期、包裝、認證等需求）':'Notes (lead time, packaging, certifications, etc.)')+'</label>'+
+    '<textarea id="bulk-notes" class="bulk-notes" placeholder="'+(lang==='zh'?'選填，適用於所有勾選的料號':'Optional, applies to all selected parts')+'"></textarea>'+
+    '<div class="bulk-footer">'+
+      '<span class="bulk-hint">'+(lang==='zh'?'勾選要詢價的料號並輸入需求量，業務 2 小時內回覆':'Select parts, enter required quantities — team responds within 2 hours')+'</span>'+
+      '<button class="form-submit bulk-btn" onclick="submitBulkInquiry()">'+(lang==='zh'?'送出詢價':'Submit Inquiry')+'</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function submitBulkInquiry(){
+  const checks=document.querySelectorAll('.pr-sel:checked');
+  if(checks.length===0){
+    alert(lang==='zh'?'請至少勾選一筆料號':'Please select at least one part');
+    return;
+  }
+  const items=[];
+  checks.forEach(c=>{
+    const idx=parseInt(c.dataset.idx,10);
+    const p=lastResults[idx];
+    if(!p)return;
+    const qtyEl=document.querySelector('.pr-qty-in[data-idx="'+idx+'"]');
+    const qty=qtyEl?qtyEl.value.trim():'';
+    items.push({pn:p.partNumber,mfr:p.manufacturer,qty});
+  });
+  const notes=(document.getElementById('bulk-notes')||{}).value||'';
+  const list=items.map(i=>i.pn+(i.qty?' × '+Number(i.qty).toLocaleString()+' pcs':'')).join('\n');
+  document.getElementById('inq-pn').textContent=list||'—';
+  document.getElementById('inq-form').style.display='';
+  document.getElementById('inq-success').style.display='none';
+  document.getElementById('inq-overlay').classList.add('open');
+  setTimeout(()=>{
+    const modalNotes=document.querySelector('#inq-form textarea');
+    if(modalNotes && notes)modalNotes.value=notes;
+  },30);
 }
 
 function doSearch(){
@@ -1014,10 +1085,14 @@ function doSearch(){
       const stock=(dk.results||[]).filter(p=>p.quantity>0).length+(mo.results||[]).filter(p=>p.quantity>0).length;
       cnt.textContent=lang==='zh'?'找到 '+totalAll+' 筆，現貨 '+stock+' 筆':'Found '+totalAll+' results, '+stock+' in stock';
       if(ADMIN){
-        cards.innerHTML=renderSourceSection('Digi-Key',dk)+renderSourceSection('Mouser',mo);
+        const dkParts=dk.results||[];
+        const moParts=mo.results||[];
+        lastResults=[...dkParts,...moParts];
+        cards.innerHTML=renderSourceSection('Digi-Key',dk,0)+renderSourceSection('Mouser',mo,dkParts.length)+bulkBar();
       } else {
         const merged=[...(dk.results||[]),...(mo.results||[])].sort((a,b)=>(b.quantity||0)-(a.quantity||0));
-        cards.innerHTML=merged.map(renderPartCard).join('');
+        lastResults=merged;
+        cards.innerHTML=renderTable(merged,0)+bulkBar();
       }
     })
     .catch(err=>{
