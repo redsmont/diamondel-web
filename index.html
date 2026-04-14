@@ -858,6 +858,26 @@ body.en .zh-block{display:none}
   </div>
 </div>
 
+<!-- ADMIN LOGIN OVERLAY -->
+<div class="overlay" id="admin-login-overlay" style="z-index:999">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-head">
+      <h2>🔒 後台登入</h2>
+    </div>
+    <div class="modal-body">
+      <div class="fr">
+        <label>密碼</label>
+        <input type="password" id="admin-pw" autocomplete="current-password" onkeydown="if(event.key==='Enter')adminLogin()">
+      </div>
+      <div id="admin-err" style="display:none;color:#ef4444;font-size:12px;margin:-6px 0 12px">密碼錯誤，請重試</div>
+      <button class="form-submit-modal" id="admin-login-btn" onclick="adminLogin()">登入</button>
+      <div style="text-align:center;margin-top:14px">
+        <a href="index.html" style="font-size:12px;color:var(--text-muted);text-decoration:none">← 回到公開頁面</a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const PARTS={
   'STM32F103C8T6':{mfr:'STMicroelectronics',pkg:'LQFP-48',spq:'500 / reel · 1,350 / box',rows:[
@@ -871,6 +891,9 @@ const PARTS={
 };
 
 const ADMIN=/admin/i.test(window.location.pathname);
+const API_BASE='https://diamondel-api.vercel.app';
+const ADMIN_TOKEN_KEY='diamondelAdminToken';
+function getAdminToken(){return localStorage.getItem(ADMIN_TOKEN_KEY)||'';}
 let currentPart='';
 let lang='zh';
 let mode='guest';
@@ -966,9 +989,17 @@ function doSearch(){
   cnt.textContent=lang==='zh'?'搜尋中...':'Searching...';
   cards.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px">'+
     '<div style="margin-bottom:12px;font-size:22px">⏳</div>'+(lang==='zh'?'正在查詢全球庫存...':'Searching global inventory...')+'</div>';
-  fetch('https://diamondel-api.vercel.app/search?q='+encodeURIComponent(q))
+  const headers={};
+  if(ADMIN){const t=getAdminToken();if(t)headers['x-admin-token']=t;}
+  fetch(API_BASE+'/search?q='+encodeURIComponent(q),{headers})
     .then(r=>r.json())
     .then(data=>{
+      if(ADMIN && !data.sources){
+        localStorage.removeItem(ADMIN_TOKEN_KEY);
+        document.getElementById('admin-login-overlay').classList.add('open');
+        wrap.style.display='none';
+        return;
+      }
       const sources=data.sources||{};
       const dk=sources.digikey||{results:(data.results||[]).filter(p=>p.source==='digikey'||!p.source)};
       const mo=sources.mouser||{results:(data.results||[]).filter(p=>p.source==='mouser')};
@@ -1094,12 +1125,42 @@ function showDash(){
   // reserved for internal dashboard
 }
 
+function adminLogin(){
+  const pw=document.getElementById('admin-pw').value;
+  const errEl=document.getElementById('admin-err');
+  const btn=document.getElementById('admin-login-btn');
+  if(!pw){errEl.textContent='請輸入密碼';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='驗證中...';errEl.style.display='none';
+  fetch(API_BASE+'/search?q=test',{headers:{'x-admin-token':pw}})
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.sources){
+        localStorage.setItem(ADMIN_TOKEN_KEY,pw);
+        document.getElementById('admin-login-overlay').classList.remove('open');
+        document.getElementById('admin-pw').value='';
+      } else {
+        errEl.textContent='密碼錯誤，請重試';errEl.style.display='block';
+      }
+    })
+    .catch(()=>{errEl.textContent='連線失敗，請稍後再試';errEl.style.display='block';})
+    .finally(()=>{btn.disabled=false;btn.textContent='登入';});
+}
+
+function adminLogout(){
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  if(ADMIN)document.getElementById('admin-login-overlay').classList.add('open');
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded',function(){
   setLang('zh');
   if(ADMIN){
     const b=document.getElementById('admin-badge');
     if(b)b.style.display='inline-block';
+    if(!getAdminToken()){
+      document.getElementById('admin-login-overlay').classList.add('open');
+      setTimeout(()=>document.getElementById('admin-pw').focus(),100);
+    }
   }
 });
 </script>
