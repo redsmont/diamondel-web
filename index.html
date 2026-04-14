@@ -1003,18 +1003,57 @@ function doRegister(){
   document.getElementById('auth-form-wrap').style.display='none';
   document.getElementById('auth-success').style.display='block';
   document.getElementById('auth-success-title').textContent=lang==='zh'?'帳號建立成功！':'Account Created!';
-  document.getElementById('auth-success-sub').textContent=lang==='zh'?'歡迎加入信東電子會員':'Welcome to DIAMONDEL';
-  currentUser={name:'新會員'};
+  document.getElementById('auth-success-sub').textContent=lang==='zh'?'歡迎加入 Diamondel 會員':'Welcome to Diamondel membership';
+  currentUser={name:'會員'};
   updateNavAuth();
 }
+
 function updateNavAuth(){
-  if(!currentUser)return;
   const nav=document.getElementById('nav-auth');
-  nav.innerHTML=`<div class="user-pill" onclick="openModal('login')">
-    <div class="user-avatar">${currentUser.name[0]}</div>
-    <span class="user-name">${currentUser.name}</span>
-  </div>`;
+  if(!nav)return;
+  if(currentUser){
+    nav.innerHTML='<span style="font-size:12px;color:rgba(255,255,255,0.55);padding:0 10px">'+
+      (lang==='zh'?'👤 ':'👤 ')+currentUser.name+'</span>'+
+      '<button class="btn-login" onclick="doLogout()">'+
+      (lang==='zh'?'登出':'Logout')+'</button>';
+  }
+}
+
+function doLogout(){
+  currentUser=null;
+  const nav=document.getElementById('nav-auth');
+  if(!nav)return;
+  nav.innerHTML='<button class="btn-login" onclick="openModal(\'login\')">'+
+    '<span data-zh>登入</span><span data-en>Login</span></button>'+
+    '<button class="btn-register" onclick="openModal(\'register\')">'+
+    '<span data-zh>註冊</span><span data-en>Register</span></button>';
 }
 
 function openInqModal(pn){
-  document.getElementById('inq-pn'v3
+  currentPart=pn||currentPart;
+  document.getElementById('inq-pn').textContent=currentPart||'—';
+  document.getElementById('inq-form').style.display='';
+  document.getElementById('inq-success').style.display='none';
+  document.getElementById('inq-overlay').classList.add('open');
+}
+
+function submitInquiry(){
+  document.getElementById('inq-form').style.display='none';
+  document.getElementById('inq-success').style.display='block';
+}
+
+function submitContact(){
+  document.getElementById('contact-overlay').classList.add('open');
+}
+
+function showDash(){
+  // reserved for internal dashboard
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded',function(){
+  setLang('zh');
+});
+</script>
+</body>
+</html>
