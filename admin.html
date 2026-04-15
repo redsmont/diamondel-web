@@ -71,10 +71,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:17
 #hero{min-height:100vh;background:#fff;padding:48px 0 0;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   position:relative;overflow:hidden}
+#hero::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:url('https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?w=2400&q=80&auto=format&fit=crop');
+  background-size:cover;background-position:center;opacity:0.18}
+#hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,0.75) 0%,rgba(255,255,255,0.92) 55%,#fff 100%)}
 .hero-grid-bg{display:none}
 .hero-glow{position:absolute;top:-200px;right:-150px;width:600px;height:600px;
-  background:radial-gradient(circle,rgba(249,115,22,0.06) 0%,transparent 60%);pointer-events:none}
-.hero-inner{max-width:980px;width:100%;padding:80px 24px 60px;text-align:center;position:relative}
+  background:radial-gradient(circle,rgba(249,115,22,0.08) 0%,transparent 60%);pointer-events:none;z-index:1}
+.hero-inner{max-width:980px;width:100%;padding:80px 24px 60px;text-align:center;position:relative;z-index:2}
+.search-box{position:relative;z-index:2}
+.results-wrap{position:relative;z-index:2}
 .hero-badge{display:inline-flex;align-items:center;gap:7px;
   background:rgba(249,115,22,0.08);border:none;
   border-radius:980px;padding:6px 16px;margin-bottom:28px}
@@ -233,11 +240,15 @@ section{padding:100px 24px}
 /* SERVICES */
 #services{background:var(--bg-soft)}
 .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
-.svc-card{border:none;border-radius:18px;padding:32px 28px;
-  transition:transform .3s cubic-bezier(.25,.1,.25,1);background:#fff}
-.svc-card:hover{transform:translateY(-2px)}
-.svc-icon{width:48px;height:48px;background:rgba(249,115,22,0.1);border-radius:12px;
-  display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px}
+.svc-card{border:none;border-radius:18px;padding:0;overflow:hidden;
+  transition:transform .35s cubic-bezier(.25,.1,.25,1),box-shadow .35s;background:#fff;
+  display:flex;flex-direction:column}
+.svc-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.08)}
+.svc-img{height:160px;background-size:cover;background-position:center;background-color:var(--bg-soft);
+  position:relative}
+.svc-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 60%,rgba(0,0,0,0.15) 100%)}
+.svc-body{padding:24px 28px 28px;flex:1;display:flex;flex-direction:column}
+.svc-icon{display:none}
 .svc-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px;letter-spacing:-0.02em}
 .svc-desc{font-size:15px;color:var(--text-muted);line-height:1.5;letter-spacing:-0.01em}
 
@@ -529,34 +540,46 @@ body.en .zh-block{display:none}
     </p>
     <div class="svc-grid">
       <div class="svc-card">
-        <div class="svc-icon">🌐</div>
-        <div class="svc-title"><span data-zh>全球現貨查詢</span><span data-en>Global Inventory Search</span></div>
-        <div class="svc-desc"><span data-zh>即時串接全球主要通路，提供最新庫存與預計出貨時間</span><span data-en>Real-time access to global distributor inventory with accurate lead times</span></div>
+        <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80&auto=format&fit=crop')"></div>
+        <div class="svc-body">
+          <div class="svc-title"><span data-zh>全球現貨查詢</span><span data-en>Global Inventory Search</span></div>
+          <div class="svc-desc"><span data-zh>即時串接全球主要通路，提供最新庫存與預計出貨時間</span><span data-en>Real-time access to global distributor inventory with accurate lead times</span></div>
+        </div>
       </div>
       <div class="svc-card">
-        <div class="svc-icon">⚡</div>
-        <div class="svc-title"><span data-zh>快速報價</span><span data-en>Fast Quotation</span></div>
-        <div class="svc-desc"><span data-zh>專業業務 2 小時內回覆正式報價，急單也能迅速處理</span><span data-en>Professional quotes within 2 hours, even for urgent orders</span></div>
+        <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800&q=80&auto=format&fit=crop')"></div>
+        <div class="svc-body">
+          <div class="svc-title"><span data-zh>快速報價</span><span data-en>Fast Quotation</span></div>
+          <div class="svc-desc"><span data-zh>專業業務 2 小時內回覆正式報價，急單也能迅速處理</span><span data-en>Professional quotes within 2 hours, even for urgent orders</span></div>
+        </div>
       </div>
       <div class="svc-card">
-        <div class="svc-icon">🔍</div>
-        <div class="svc-title"><span data-zh>替代料建議</span><span data-en>Alternative Parts</span></div>
-        <div class="svc-desc"><span data-zh>料號缺貨時，提供規格相符的替代料，確保生產不中斷</span><span data-en>When parts are unavailable, we source compatible alternatives</span></div>
+        <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1563770660941-20978e870e26?w=800&q=80&auto=format&fit=crop')"></div>
+        <div class="svc-body">
+          <div class="svc-title"><span data-zh>替代料建議</span><span data-en>Alternative Parts</span></div>
+          <div class="svc-desc"><span data-zh>料號缺貨時，提供規格相符的替代料，確保生產不中斷</span><span data-en>When parts are unavailable, we source compatible alternatives</span></div>
+        </div>
       </div>
       <div class="svc-card">
-        <div class="svc-icon">📦</div>
-        <div class="svc-title"><span data-zh>BOM 批次詢價</span><span data-en>BOM Inquiry</span></div>
-        <div class="svc-desc"><span data-zh>上傳 BOM 清單，一次取得多料號現貨報價</span><span data-en>Upload your BOM for consolidated multi-part quotations</span></div>
+        <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=800&q=80&auto=format&fit=crop')"></div>
+        <div class="svc-body">
+          <div class="svc-title"><span data-zh>BOM 批次詢價</span><span data-en>BOM Inquiry</span></div>
+          <div class="svc-desc"><span data-zh>上傳 BOM 清單，一次取得多料號現貨報價</span><span data-en>Upload your BOM for consolidated multi-part quotations</span></div>
+        </div>
       </div>
       <div class="svc-card">
-        <div class="svc-icon">🛡️</div>
-        <div class="svc-title"><span data-zh>品質保障</span><span data-en>Quality Assurance</span></div>
-        <div class="svc-desc"><span data-zh>嚴格把關料件來源，提供原廠包裝及出廠測試報告</span><span data-en>Strict sourcing controls with factory packaging and test reports</span></div>
+        <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&q=80&auto=format&fit=crop')"></div>
+        <div class="svc-body">
+          <div class="svc-title"><span data-zh>品質保障</span><span data-en>Quality Assurance</span></div>
+          <div class="svc-desc"><span data-zh>嚴格把關料件來源，提供原廠包裝及出廠測試報告</span><span data-en>Strict sourcing controls with factory packaging and test reports</span></div>
+        </div>
       </div>
       <div class="svc-card">
-        <div class="svc-icon">🤝</div>
-        <div class="svc-title"><span data-zh>長期合作</span><span data-en>Long-term Partnership</span></div>
-        <div class="svc-desc"><span data-zh>提供庫存備料與寄倉服務，為長期客戶規劃彈性採購條件</span><span data-en>Consignment and stocking programs for long-term customers</span></div>
+        <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1588508065123-287b28e013da?w=800&q=80&auto=format&fit=crop')"></div>
+        <div class="svc-body">
+          <div class="svc-title"><span data-zh>長期合作</span><span data-en>Long-term Partnership</span></div>
+          <div class="svc-desc"><span data-zh>提供庫存備料與寄倉服務，為長期客戶規劃彈性採購條件</span><span data-en>Consignment and stocking programs for long-term customers</span></div>
+        </div>
       </div>
     </div>
   </div>
