@@ -1121,9 +1121,15 @@ function doSearch(){
         return;
       }
       const sources=data.sources||{};
-      const dk=sources.digikey||{results:(data.results||[]).filter(p=>p.source==='digikey'||!p.source)};
+      const inv=sources.inventory||{results:(data.results||[]).filter(p=>p.source==='inventory')};
+      const dk=sources.digikey||{results:(data.results||[]).filter(p=>p.source==='digikey'||(!p.source&&!data.sources))};
       const mo=sources.mouser||{results:(data.results||[]).filter(p=>p.source==='mouser')};
-      const totalAll=(dk.results||[]).length+(mo.results||[]).length;
+      // In public mode, items without source field are market (source was stripped);
+      // in admin mode, sources.digikey is authoritative.
+      if(!data.sources){
+        dk.results=(data.results||[]).filter(p=>p.source!=='inventory');
+      }
+      const totalAll=(inv.results||[]).length+(dk.results||[]).length+(mo.results||[]).length;
       if(totalAll===0){
         cnt.textContent='';
         cards.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px">'+
@@ -1131,15 +1137,25 @@ function doSearch(){
           (lang==='zh'?'查無料號「'+q+'」，請確認後重試':'No results found for "'+q+'"')+'</div>';
         return;
       }
-      const stock=(dk.results||[]).filter(p=>p.quantity>0).length+(mo.results||[]).filter(p=>p.quantity>0).length;
+      const stock=(inv.results||[]).filter(p=>p.quantity>0).length+(dk.results||[]).filter(p=>p.quantity>0).length+(mo.results||[]).filter(p=>p.quantity>0).length;
       cnt.textContent=lang==='zh'?'找到 '+totalAll+' 筆，現貨 '+stock+' 筆':'Found '+totalAll+' results, '+stock+' in stock';
       if(ADMIN){
+        const invParts=inv.results||[];
         const dkParts=dk.results||[];
         const moParts=mo.results||[];
-        lastResults=[...dkParts,...moParts];
-        cards.innerHTML=renderSourceSection('Digi-Key',dk,0)+renderSourceSection('Mouser',mo,dkParts.length)+bulkBar();
+        lastResults=[...invParts,...dkParts,...moParts];
+        let html='';
+        if(invParts.length||inv.error)html+=renderSourceSection(lang==='zh'?'自家庫存':'Own Stock',inv,0);
+        html+=renderSourceSection('Digi-Key',dk,invParts.length);
+        html+=renderSourceSection('Mouser',mo,invParts.length+dkParts.length);
+        cards.innerHTML=html+bulkBar();
       } else {
-        const merged=[...(dk.results||[]),...(mo.results||[])].sort((a,b)=>(b.quantity||0)-(a.quantity||0));
+        const merged=[...(inv.results||[]),...(dk.results||[]),...(mo.results||[])].sort((a,b)=>{
+          const ao=a.source==='inventory'?0:1;
+          const bo=b.source==='inventory'?0:1;
+          if(ao!==bo)return ao-bo;
+          return (b.quantity||0)-(a.quantity||0);
+        });
         lastResults=merged;
         cards.innerHTML=renderTable(merged,0)+bulkBar();
       }
