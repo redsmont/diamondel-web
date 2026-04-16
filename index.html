@@ -671,28 +671,29 @@ body.en .zh-block{display:none}
         <div class="f2col">
           <div class="fr">
             <label><span data-zh>公司名稱</span><span data-en>Company</span> *</label>
-            <input type="text" placeholder="Company Name">
+            <input type="text" id="ct-company" placeholder="Company Name">
           </div>
           <div class="fr">
             <label><span data-zh>聯絡人</span><span data-en>Contact</span> *</label>
-            <input type="text" placeholder="Your Name">
+            <input type="text" id="ct-name" placeholder="Your Name">
           </div>
         </div>
         <div class="f2col">
           <div class="fr">
             <label>Email *</label>
-            <input type="email" placeholder="you@company.com">
+            <input type="email" id="ct-email" placeholder="you@company.com">
           </div>
           <div class="fr">
             <label><span data-zh>電話</span><span data-en>Phone</span></label>
-            <input type="tel" placeholder="+886-2-xxxx-xxxx">
+            <input type="tel" id="ct-phone" placeholder="+886-2-xxxx-xxxx">
           </div>
         </div>
         <div class="fr">
           <label><span data-zh>料號 / 需求說明</span><span data-en>Part No. / Requirements</span> *</label>
-          <textarea placeholder="Part number, quantity, delivery requirements..."></textarea>
+          <textarea id="ct-notes" placeholder="Part number, quantity, delivery requirements..."></textarea>
         </div>
-        <button class="form-submit" onclick="submitContact()">
+        <div id="ct-err" style="display:none;color:#ef4444;font-size:13px;margin:-6px 0 10px"></div>
+        <button class="form-submit" id="ct-submit-btn" onclick="submitContact()">
           <span data-zh>送出詢問</span><span data-en>Submit Inquiry</span>
         </button>
       </div>
@@ -877,19 +878,17 @@ body.en .zh-block{display:none}
         <div style="font-family:var(--mono);font-size:15px;color:var(--navy)" id="inq-pn">—</div>
       </div>
       <div class="f2col">
-        <div class="fr"><label><span data-zh>公司</span><span data-en>Company</span> *</label><input type="text" placeholder="Company"></div>
-        <div class="fr"><label><span data-zh>姓名</span><span data-en>Name</span> *</label><input type="text" placeholder="Name"></div>
+        <div class="fr"><label><span data-zh>公司</span><span data-en>Company</span> *</label><input type="text" id="inq-company" placeholder="Company"></div>
+        <div class="fr"><label><span data-zh>姓名</span><span data-en>Name</span> *</label><input type="text" id="inq-name" placeholder="Name"></div>
       </div>
       <div class="f2col">
-        <div class="fr"><label>Email *</label><input type="email" placeholder="you@company.com"></div>
-        <div class="fr"><label><span data-zh>電話</span><span data-en>Phone</span></label><input type="tel" placeholder="+886-2-xxxx-xxxx"></div>
+        <div class="fr"><label>Email *</label><input type="email" id="inq-email" placeholder="you@company.com"></div>
+        <div class="fr"><label><span data-zh>電話</span><span data-en>Phone</span></label><input type="tel" id="inq-phone" placeholder="+886-2-xxxx-xxxx"></div>
       </div>
-      <div class="f2col">
-        <div class="fr"><label><span data-zh>需求數量</span><span data-en>Qty Needed</span> *</label><input type="number" placeholder="pcs"></div>
-        <div class="fr"><label><span data-zh>需求交期</span><span data-en>Lead Time</span></label><input type="text" placeholder="e.g. 2 weeks"></div>
-      </div>
-      <div class="fr"><label><span data-zh>備註</span><span data-en>Notes</span></label><textarea placeholder="Packaging, certifications, special requirements..."></textarea></div>
-      <button class="form-submit" onclick="submitInquiry()">
+      <div class="fr"><label><span data-zh>需求交期</span><span data-en>Lead Time</span></label><input type="text" id="inq-lead" placeholder="e.g. 2 weeks"></div>
+      <div class="fr"><label><span data-zh>備註</span><span data-en>Notes</span></label><textarea id="inq-notes" placeholder="Packaging, certifications, special requirements..."></textarea></div>
+      <div id="inq-err" style="display:none;color:#ef4444;font-size:13px;margin:-6px 0 10px"></div>
+      <button class="form-submit" id="inq-submit-btn" onclick="submitInquiry()">
         <span data-zh>確認送出</span><span data-en>Submit</span>
       </button>
     </div>
@@ -1084,18 +1083,16 @@ function submitBulkInquiry(){
     if(!p)return;
     const qtyEl=document.querySelector('.pr-qty-in[data-idx="'+idx+'"]');
     const qty=qtyEl?qtyEl.value.trim():'';
-    items.push({pn:p.partNumber,mfr:p.manufacturer,qty});
+    items.push({pn:p.partNumber,manufacturer:p.manufacturer,qty:parseInt(qty,10)||0});
   });
-  const notes=(document.getElementById('bulk-notes')||{}).value||'';
+  pendingInquiryParts=items;
+  pendingInquiryNotes=(document.getElementById('bulk-notes')||{}).value||'';
   const list=items.map(i=>i.pn+(i.qty?' × '+Number(i.qty).toLocaleString()+' pcs':'')).join('\n');
   document.getElementById('inq-pn').textContent=list||'—';
   document.getElementById('inq-form').style.display='';
   document.getElementById('inq-success').style.display='none';
+  document.getElementById('inq-err').style.display='none';
   document.getElementById('inq-overlay').classList.add('open');
-  setTimeout(()=>{
-    const modalNotes=document.querySelector('#inq-form textarea');
-    if(modalNotes && notes)modalNotes.value=notes;
-  },30);
 }
 
 function doSearch(){
@@ -1252,13 +1249,87 @@ function openInqModal(pn){
   document.getElementById('inq-overlay').classList.add('open');
 }
 
+let pendingInquiryParts=[];
+let pendingInquiryNotes='';
+
+async function postInquiry(payload,btn,errEl,onSuccess){
+  if(btn){btn.disabled=true;const b=btn.querySelector('[data-zh]');if(b)b.textContent='送出中...';else btn.textContent='送出中...';}
+  if(errEl)errEl.style.display='none';
+  try{
+    const r=await fetch(API_BASE+'/inquiry',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const j=await r.json();
+    if(r.ok&&j.success){
+      onSuccess();
+    } else {
+      if(errEl){errEl.textContent=(lang==='zh'?'送出失敗：':'Failed: ')+(j.error||r.status);errEl.style.display='block';}
+      else alert(j.error||'Failed');
+    }
+  } catch(e){
+    if(errEl){errEl.textContent=(lang==='zh'?'連線失敗，請稍後再試':'Connection failed')+'：'+e.message;errEl.style.display='block';}
+    else alert(e.message);
+  } finally {
+    if(btn){btn.disabled=false;const b=btn.querySelector('[data-zh]');if(b)b.textContent='確認送出';}
+  }
+}
+
 function submitInquiry(){
-  document.getElementById('inq-form').style.display='none';
-  document.getElementById('inq-success').style.display='block';
+  const contact={
+    company:document.getElementById('inq-company').value.trim(),
+    name:document.getElementById('inq-name').value.trim(),
+    email:document.getElementById('inq-email').value.trim(),
+    phone:document.getElementById('inq-phone').value.trim(),
+    leadTime:document.getElementById('inq-lead').value.trim()
+  };
+  const errEl=document.getElementById('inq-err');
+  if(!contact.company||!contact.name){
+    errEl.textContent=lang==='zh'?'請填公司與姓名':'Company and name required';errEl.style.display='block';return;
+  }
+  if(!contact.email&&!contact.phone){
+    errEl.textContent=lang==='zh'?'Email 或電話至少填一個':'Email or phone required';errEl.style.display='block';return;
+  }
+  const extraNote=document.getElementById('inq-notes').value.trim();
+  const combinedNotes=[pendingInquiryNotes,extraNote].filter(Boolean).join('\n---\n');
+  const payload={
+    contact,
+    parts:pendingInquiryParts,
+    notes:combinedNotes,
+    source:ADMIN?'admin':'public'
+  };
+  postInquiry(payload,document.getElementById('inq-submit-btn'),errEl,()=>{
+    document.getElementById('inq-form').style.display='none';
+    document.getElementById('inq-success').style.display='block';
+    // Clear fields for next time
+    ['inq-company','inq-name','inq-email','inq-phone','inq-lead','inq-notes'].forEach(id=>{document.getElementById(id).value='';});
+    pendingInquiryParts=[];pendingInquiryNotes='';
+  });
 }
 
 function submitContact(){
-  document.getElementById('contact-overlay').classList.add('open');
+  const contact={
+    company:document.getElementById('ct-company').value.trim(),
+    name:document.getElementById('ct-name').value.trim(),
+    email:document.getElementById('ct-email').value.trim(),
+    phone:document.getElementById('ct-phone').value.trim()
+  };
+  const notes=document.getElementById('ct-notes').value.trim();
+  const errEl=document.getElementById('ct-err');
+  if(!contact.company||!contact.name){
+    errEl.textContent=lang==='zh'?'請填公司與聯絡人':'Company and contact required';errEl.style.display='block';return;
+  }
+  if(!contact.email&&!contact.phone){
+    errEl.textContent=lang==='zh'?'Email 或電話至少填一個':'Email or phone required';errEl.style.display='block';return;
+  }
+  if(!notes){
+    errEl.textContent=lang==='zh'?'請填料號或需求說明':'Part no. or requirements required';errEl.style.display='block';return;
+  }
+  postInquiry({contact,parts:[],notes,source:'public'},document.getElementById('ct-submit-btn'),errEl,()=>{
+    ['ct-company','ct-name','ct-email','ct-phone','ct-notes'].forEach(id=>{document.getElementById(id).value='';});
+    document.getElementById('contact-overlay').classList.add('open');
+  });
 }
 
 function showDash(){

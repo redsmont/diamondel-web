@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>詢價管理 | SDIAMOND 後台</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#f97316;--orange2:#ea6c0a;
+  --bg:#fff;--bg-soft:#f5f5f7;--bg-tint:#fafafc;
+  --border:#d2d2d7;--border-soft:#e8e8ed;
+  --text:#1d1d1f;--text-muted:rgba(0,0,0,0.72);--text-subtle:rgba(0,0,0,0.48);
+  --green:#10b981;--amber:#f59e0b;--blue:#0071e3;--red:#ef4444;--slate:#64748b;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','Noto Sans TC',Helvetica,Arial,sans-serif;
+  --mono:'SF Mono',ui-monospace,Menlo,Monaco,monospace;
+}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:var(--font);background:var(--bg-soft);color:var(--text);font-size:15px;line-height:1.47;letter-spacing:-0.022em;min-height:100vh}
+
+.topbar{background:rgba(255,255,255,0.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid rgba(0,0,0,0.08);height:56px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{width:32px;height:32px;border-radius:7px;object-fit:contain}
+.topbar-title{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.01em}
+.topbar-badge{margin-left:8px;padding:2px 8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:4px;letter-spacing:.5px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-link{color:var(--text-muted);font-size:13px;text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s}
+.topbar-link:hover{color:var(--text)}
+.btn-logout{background:transparent;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:var(--font);padding:6px 10px;letter-spacing:-0.01em}
+.btn-logout:hover{color:var(--red)}
+
+main{max-width:1200px;margin:0 auto;padding:36px 24px 80px}
+h1{font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin-bottom:8px}
+.subtitle{font-size:16px;color:var(--text-muted);margin-bottom:24px;letter-spacing:-0.015em}
+
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-tabs{display:inline-flex;background:#fff;border-radius:11px;padding:3px;gap:0}
+.filter-tab{background:transparent;border:none;padding:6px 14px;font-size:13px;font-weight:500;
+  cursor:pointer;border-radius:8px;color:var(--text-muted);font-family:var(--font);
+  transition:all .2s;letter-spacing:-0.01em}
+.filter-tab.on{background:var(--text);color:#fff}
+.tab-count{margin-left:5px;font-family:var(--mono);font-size:11px;opacity:.7}
+.toolbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-muted);
+  border-radius:980px;padding:7px 16px;font-size:13px;cursor:pointer;font-family:var(--font);letter-spacing:-0.01em;transition:all .15s}
+.btn-ghost:hover{background:#fff;color:var(--text)}
+
+.card{background:#fff;border-radius:16px;overflow:hidden}
+.table-wrap{overflow-x:auto}
+.inq-table{width:100%;border-collapse:collapse;font-size:13px}
+.inq-table th{background:var(--bg-soft);padding:12px 14px;text-align:left;
+  font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:1px solid var(--border)}
+.inq-table td{padding:14px;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:middle}
+.inq-table tbody tr{cursor:pointer;transition:background .1s}
+.inq-table tbody tr:hover td{background:var(--bg-tint)}
+.col-time{white-space:nowrap;font-size:12px;color:var(--text-muted)}
+.col-company{font-weight:600;min-width:140px}
+.col-sub{font-size:11px;color:var(--text-muted);font-weight:400;margin-top:2px}
+.col-parts{max-width:320px}
+.parts-chip{display:inline-block;background:var(--bg-soft);border-radius:6px;padding:2px 8px;font-size:11px;font-family:var(--mono);margin-right:4px;margin-bottom:3px}
+.col-status{white-space:nowrap}
+
+.status-pill{display:inline-block;padding:3px 10px;border-radius:980px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.status-pending{background:rgba(245,158,11,0.12);color:#92400e}
+.status-quoted{background:rgba(0,113,227,0.12);color:#0050a0}
+.status-won{background:rgba(16,185,129,0.12);color:#065f46}
+.status-closed{background:rgba(100,116,139,0.12);color:#334155}
+
+.empty{padding:60px 20px;text-align:center;color:var(--text-subtle);font-size:14px}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(20px) saturate(180%);
+  z-index:100;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:640px;box-shadow:0 24px 70px rgba(0,0,0,0.2)}
+.modal-head{padding:24px 28px 8px;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:22px;font-weight:600;letter-spacing:-0.02em}
+.modal-subtitle{font-size:12px;color:var(--text-muted);font-family:var(--mono);margin-top:4px}
+.modal-x{background:rgba(0,0,0,0.06);border:none;color:var(--text-muted);
+  width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;
+  display:flex;align-items:center;justify-content:center;font-family:var(--font);transition:background .15s}
+.modal-x:hover{background:rgba(0,0,0,0.1);color:var(--text)}
+.modal-body{padding:4px 28px 28px}
+.detail-grid{display:grid;grid-template-columns:100px 1fr;gap:10px 14px;margin:18px 0 22px;font-size:14px;letter-spacing:-0.01em}
+.detail-grid dt{color:var(--text-muted);font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+.detail-grid dd{color:var(--text);word-break:break-word}
+.detail-grid dd a{color:var(--blue);text-decoration:none}
+.detail-grid dd a:hover{text-decoration:underline}
+.notes-box{background:var(--bg-soft);border-radius:11px;padding:14px 16px;font-size:14px;color:var(--text);margin-bottom:20px;white-space:pre-wrap;line-height:1.55;letter-spacing:-0.01em}
+
+.section-h{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.status-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.status-btn{background:var(--bg-soft);border:none;border-radius:980px;padding:7px 16px;font-size:13px;
+  cursor:pointer;font-family:var(--font);color:var(--text-muted);letter-spacing:-0.01em;transition:all .15s}
+.status-btn:hover{background:rgba(0,0,0,0.08)}
+.status-btn.on{background:var(--text);color:#fff}
+
+.note-list{margin-bottom:14px}
+.note-item{background:var(--bg-soft);border-radius:11px;padding:12px 14px;margin-bottom:8px;font-size:13px;letter-spacing:-0.01em}
+.note-at{font-size:11px;color:var(--text-muted);font-family:var(--mono);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.note-del{background:none;border:none;color:var(--text-subtle);cursor:pointer;font-size:11px;padding:0}
+.note-del:hover{color:var(--red)}
+.note-text{white-space:pre-wrap}
+
+.note-input-row{display:flex;gap:8px;align-items:flex-start}
+.note-input-row textarea{flex:1;border:1px solid transparent;background:var(--bg-soft);
+  border-radius:11px;padding:10px 14px;font-family:var(--font);font-size:13px;color:var(--text);
+  outline:none;resize:vertical;min-height:52px;letter-spacing:-0.01em;transition:border-color .15s,box-shadow .15s}
+.note-input-row textarea:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(249,115,22,0.15)}
+.btn{background:var(--orange);color:#fff;border:none;border-radius:980px;
+  padding:10px 22px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);
+  transition:background .2s;letter-spacing:-0.01em;white-space:nowrap}
+.btn:hover{background:var(--orange2)}
+.btn:disabled{background:rgba(0,0,0,0.2);cursor:not-allowed}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+.btn-danger:hover{background:var(--red);color:#fff}
+
+.modal-footer{padding:16px 28px;border-top:1px solid var(--border-soft);
+  display:flex;justify-content:space-between;gap:10px;align-items:center}
+
+/* Login overlay */
+.login-ov{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(20px) saturate(180%);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.login-ov.open{display:flex}
+.login-card{background:#fff;border-radius:18px;width:100%;max-width:360px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,0.2)}
+.login-card h2{font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px}
+.login-card p{font-size:13px;color:var(--text-muted);margin-bottom:18px;letter-spacing:-0.01em}
+.login-card input{width:100%;border:1px solid transparent;background:var(--bg-soft);
+  border-radius:11px;padding:12px 14px;font-size:15px;color:var(--text);letter-spacing:-0.01em;
+  outline:none;font-family:var(--font);transition:border-color .15s,box-shadow .15s}
+.login-card input:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(249,115,22,0.15)}
+.login-card .btn{width:100%;margin-top:14px;padding:13px}
+.login-card .err{color:var(--red);font-size:12px;margin-top:8px;display:none;letter-spacing:-0.01em}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <img class="topbar-logo" src="logo.png" alt="SDIAMOND">
+    <span class="topbar-title">SDIAMOND 後台</span>
+    <span class="topbar-badge">ADMIN</span>
+  </div>
+  <div class="topbar-right">
+    <a class="topbar-link" href="admin.html">搜尋</a>
+    <a class="topbar-link" href="inventory.html">庫存</a>
+    <button class="btn-logout" onclick="logout()">登出</button>
+  </div>
+</div>
+
+<main>
+  <h1>詢價管理</h1>
+  <p class="subtitle">客戶從前台送出詢價後會進到這。狀態可切換、可加內部備註。</p>
+
+  <div class="toolbar">
+    <div class="filter-tabs" id="tabs">
+      <button class="filter-tab on" data-f="">全部 <span class="tab-count" id="c-all">0</span></button>
+      <button class="filter-tab" data-f="pending">待回覆 <span class="tab-count" id="c-pending">0</span></button>
+      <button class="filter-tab" data-f="quoted">已報價 <span class="tab-count" id="c-quoted">0</span></button>
+      <button class="filter-tab" data-f="won">已成交 <span class="tab-count" id="c-won">0</span></button>
+      <button class="filter-tab" data-f="closed">已關閉 <span class="tab-count" id="c-closed">0</span></button>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn-ghost" onclick="loadInquiries()">重新整理</button>
+      <button class="btn-ghost" onclick="exportCsv()">匯出 CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table class="inq-table" id="inq-table">
+        <thead>
+          <tr>
+            <th style="width:150px">時間</th>
+            <th>客戶</th>
+            <th>聯絡</th>
+            <th>料號</th>
+            <th style="width:100px">狀態</th>
+          </tr>
+        </thead>
+        <tbody id="inq-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Detail modal -->
+<div class="overlay" id="detail-ov" onclick="if(event.target===this)closeDetail()">
+  <div class="modal" id="detail-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="d-company">—</div>
+        <div class="modal-subtitle" id="d-id">—</div>
+      </div>
+      <button class="modal-x" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="modal-body">
+      <dl class="detail-grid">
+        <dt>姓名</dt><dd id="d-name">—</dd>
+        <dt>Email</dt><dd id="d-email">—</dd>
+        <dt>電話</dt><dd id="d-phone">—</dd>
+        <dt>交期</dt><dd id="d-lead">—</dd>
+        <dt>時間</dt><dd id="d-created">—</dd>
+        <dt>來源</dt><dd id="d-source">—</dd>
+        <dt>料號</dt><dd id="d-parts">—</dd>
+      </dl>
+
+      <div class="section-h">客戶備註</div>
+      <div class="notes-box" id="d-notes">—</div>
+
+      <div class="section-h">狀態</div>
+      <div class="status-row" id="d-status">
+        <button class="status-btn" data-s="pending" onclick="setStatus('pending')">待回覆</button>
+        <button class="status-btn" data-s="quoted" onclick="setStatus('quoted')">已報價</button>
+        <button class="status-btn" data-s="won" onclick="setStatus('won')">已成交</button>
+        <button class="status-btn" data-s="closed" onclick="setStatus('closed')">已關閉</button>
+      </div>
+
+      <div class="section-h">內部備註（業務用，不會給客戶看）</div>
+      <div class="note-list" id="d-notelist"></div>
+      <div class="note-input-row">
+        <textarea id="d-newnote" placeholder="例：2026/4/17 已回電 Eva，報價 $0.85/pcs，等客戶確認"></textarea>
+        <button class="btn" onclick="addNote()">新增備註</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteInquiry()">刪除</button>
+      <button class="btn-ghost" onclick="closeDetail()" style="padding:9px 20px">關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="login-ov" id="login-ov">
+  <div class="login-card">
+    <h2>🔒 後台登入</h2>
+    <p>請輸入管理密碼</p>
+    <input type="password" id="pw" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn" id="login-btn" onclick="doLogin()">登入</button>
+    <div class="err" id="err">密碼錯誤</div>
+  </div>
+</div>
+
+<script>
+const API_BASE='https://diamondel-api.vercel.app';
+const KEY='diamondelAdminToken';
+function getTok(){return localStorage.getItem(KEY)||'';}
+let allInquiries=[];
+let currentFilter='';
+let currentInquiry=null;
+
+const STATUS_LABEL={pending:'待回覆',quoted:'已報價',won:'已成交',closed:'已關閉'};
+
+function showLogin(){document.getElementById('login-ov').classList.add('open');setTimeout(()=>document.getElementById('pw').focus(),80);}
+function hideLogin(){document.getElementById('login-ov').classList.remove('open');}
+
+async function doLogin(){
+  const pw=document.getElementById('pw').value;
+  const err=document.getElementById('err');
+  const btn=document.getElementById('login-btn');
+  if(!pw){err.textContent='請輸入密碼';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='驗證中...';err.style.display='none';
+  try{
+    const r=await fetch(API_BASE+'/inquiry',{headers:{'x-admin-token':pw}});
+    if(r.ok){
+      localStorage.setItem(KEY,pw);
+      document.getElementById('pw').value='';
+      hideLogin();
+      loadInquiries();
+    } else if(r.status===401){
+      err.textContent='密碼錯誤';err.style.display='block';
+    } else if(r.status===503){
+      err.textContent='後端 Redis 尚未設定';err.style.display='block';
+    } else {
+      err.textContent='錯誤（'+r.status+'）';err.style.display='block';
+    }
+  } catch(e){err.textContent='連線失敗';err.style.display='block';}
+  btn.disabled=false;btn.textContent='登入';
+}
+
+function logout(){localStorage.removeItem(KEY);showLogin();}
+
+async function loadInquiries(){
+  const tok=getTok();
+  if(!tok)return showLogin();
+  try{
+    const r=await fetch(API_BASE+'/inquiry',{headers:{'x-admin-token':tok}});
+    if(r.status===401){logout();return;}
+    const j=await r.json();
+    allInquiries=j.inquiries||[];
+    updateCounts();
+    renderTable();
+  } catch(e){
+    document.getElementById('inq-tbody').innerHTML='<tr><td colspan="5" class="empty">載入失敗：'+esc(e.message)+'</td></tr>';
+  }
+}
+
+function updateCounts(){
+  document.getElementById('c-all').textContent=allInquiries.length;
+  ['pending','quoted','won','closed'].forEach(s=>{
+    document.getElementById('c-'+s).textContent=allInquiries.filter(i=>i.status===s).length;
+  });
+}
+
+function renderTable(){
+  const tbody=document.getElementById('inq-tbody');
+  const list=currentFilter?allInquiries.filter(i=>i.status===currentFilter):allInquiries;
+  if(list.length===0){
+    tbody.innerHTML='<tr><td colspan="5" class="empty">'+(currentFilter?'此狀態無資料':'目前沒有詢價')+'</td></tr>';
+    return;
+  }
+  tbody.innerHTML=list.map(i=>{
+    const c=i.contact||{};
+    const t=new Date(i.createdAt);
+    const timeTxt=t.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const parts=(i.parts||[]).map(p=>'<span class="parts-chip">'+esc(p.pn||p.partNumber)+(p.qty?' × '+Number(p.qty).toLocaleString():'')+'</span>').join('')||'<span style="color:var(--text-subtle)">—</span>';
+    const contactLine=[c.email,c.phone].filter(Boolean).join('<br>')||'—';
+    return '<tr onclick="openDetail(\''+i.id+'\')">'+
+      '<td class="col-time">'+timeTxt+'</td>'+
+      '<td class="col-company">'+esc(c.company||'—')+'<div class="col-sub">'+esc(c.name||'')+'</div></td>'+
+      '<td>'+contactLine+'</td>'+
+      '<td class="col-parts">'+parts+'</td>'+
+      '<td class="col-status"><span class="status-pill status-'+i.status+'">'+STATUS_LABEL[i.status]+'</span></td>'+
+      '</tr>';
+  }).join('');
+}
+
+function openDetail(id){
+  const i=allInquiries.find(x=>x.id===id);
+  if(!i)return;
+  currentInquiry=i;
+  const c=i.contact||{};
+  document.getElementById('d-company').textContent=c.company||'—';
+  document.getElementById('d-id').textContent='#'+i.id;
+  document.getElementById('d-name').textContent=c.name||'—';
+  document.getElementById('d-email').innerHTML=c.email?'<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>':'—';
+  document.getElementById('d-phone').innerHTML=c.phone?'<a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a>':'—';
+  document.getElementById('d-lead').textContent=c.leadTime||'—';
+  document.getElementById('d-created').textContent=new Date(i.createdAt).toLocaleString('zh-TW');
+  document.getElementById('d-source').textContent=i.source==='admin'?'後台代送':'前台';
+  const parts=(i.parts||[]).map(p=>esc(p.pn||p.partNumber)+(p.qty?' × '+Number(p.qty).toLocaleString()+' pcs':'')+(p.manufacturer?' ('+esc(p.manufacturer)+')':'')).join('<br>')||'（無）';
+  document.getElementById('d-parts').innerHTML=parts;
+  document.getElementById('d-notes').textContent=i.notes||'（無）';
+  // Status buttons
+  document.querySelectorAll('#d-status .status-btn').forEach(b=>{
+    b.classList.toggle('on',b.dataset.s===i.status);
+  });
+  // Internal notes
+  renderNotes(i.internalNotes||[]);
+  document.getElementById('d-newnote').value='';
+  document.getElementById('detail-ov').classList.add('open');
+}
+
+function renderNotes(notes){
+  const el=document.getElementById('d-notelist');
+  if(notes.length===0){el.innerHTML='<div style="color:var(--text-subtle);font-size:13px;padding:4px 0">尚無備註</div>';return;}
+  el.innerHTML=notes.map((n,idx)=>'<div class="note-item">'+
+    '<div class="note-at"><span>'+new Date(n.at).toLocaleString('zh-TW')+'</span>'+
+    '<button class="note-del" onclick="deleteNote('+idx+')">刪除</button></div>'+
+    '<div class="note-text">'+esc(n.text)+'</div>'+
+    '</div>').join('');
+}
+
+function closeDetail(){
+  document.getElementById('detail-ov').classList.remove('open');
+  currentInquiry=null;
+}
+
+async function setStatus(s){
+  if(!currentInquiry)return;
+  if(currentInquiry.status===s)return;
+  const prev=currentInquiry.status;
+  currentInquiry.status=s;
+  // Optimistic UI
+  document.querySelectorAll('#d-status .status-btn').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  try{
+    const r=await fetch(API_BASE+'/inquiry',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','x-admin-token':getTok()},
+      body:JSON.stringify({id:currentInquiry.id,status:s})
+    });
+    if(!r.ok){throw new Error('update failed');}
+    updateCounts();renderTable();
+  } catch(e){
+    currentInquiry.status=prev;
+    document.querySelectorAll('#d-status .status-btn').forEach(b=>b.classList.toggle('on',b.dataset.s===prev));
+    alert('狀態更新失敗：'+e.message);
+  }
+}
+
+async function addNote(){
+  if(!currentInquiry)return;
+  const text=document.getElementById('d-newnote').value.trim();
+  if(!text)return;
+  try{
+    const r=await fetch(API_BASE+'/inquiry',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','x-admin-token':getTok()},
+      body:JSON.stringify({id:currentInquiry.id,addNote:text})
+    });
+    const j=await r.json();
+    if(r.ok){
+      currentInquiry=j.inquiry;
+      // Update in allInquiries
+      const idx=allInquiries.findIndex(x=>x.id===currentInquiry.id);
+      if(idx>=0)allInquiries[idx]=currentInquiry;
+      renderNotes(currentInquiry.internalNotes||[]);
+      document.getElementById('d-newnote').value='';
+    } else alert(j.error||'新增失敗');
+  } catch(e){alert(e.message);}
+}
+
+async function deleteNote(noteIdx){
+  if(!currentInquiry||!confirm('刪除此備註？'))return;
+  try{
+    const r=await fetch(API_BASE+'/inquiry',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','x-admin-token':getTok()},
+      body:JSON.stringify({id:currentInquiry.id,deleteNoteIndex:noteIdx})
+    });
+    const j=await r.json();
+    if(r.ok){
+      currentInquiry=j.inquiry;
+      const idx=allInquiries.findIndex(x=>x.id===currentInquiry.id);
+      if(idx>=0)allInquiries[idx]=currentInquiry;
+      renderNotes(currentInquiry.internalNotes||[]);
+    } else alert(j.error||'刪除失敗');
+  } catch(e){alert(e.message);}
+}
+
+async function deleteInquiry(){
+  if(!currentInquiry||!confirm('確定要刪除這筆詢價？\n\n公司：'+(currentInquiry.contact.company||'—')+'\n此動作無法還原。'))return;
+  try{
+    const r=await fetch(API_BASE+'/inquiry?id='+encodeURIComponent(currentInquiry.id),{
+      method:'DELETE',
+      headers:{'x-admin-token':getTok()}
+    });
+    if(r.ok){
+      closeDetail();
+      loadInquiries();
+    } else alert('刪除失敗');
+  } catch(e){alert(e.message);}
+}
+
+function exportCsv(){
+  const list=currentFilter?allInquiries.filter(i=>i.status===currentFilter):allInquiries;
+  if(list.length===0){alert('沒有資料可匯出');return;}
+  const rows=[['ID','時間','狀態','公司','姓名','Email','電話','交期','料號','客戶備註','內部備註']];
+  list.forEach(i=>{
+    const c=i.contact||{};
+    const parts=(i.parts||[]).map(p=>(p.pn||p.partNumber)+(p.qty?' x '+p.qty:'')).join(' | ');
+    const inotes=(i.internalNotes||[]).map(n=>new Date(n.at).toLocaleString('zh-TW')+': '+n.text).join(' || ');
+    rows.push([i.id,new Date(i.createdAt).toLocaleString('zh-TW'),STATUS_LABEL[i.status]||i.status,c.company||'',c.name||'',c.email||'',c.phone||'',c.leadTime||'',parts,i.notes||'',inotes]);
+  });
+  const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='inquiries-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// Filter tabs
+document.getElementById('tabs').addEventListener('click',e=>{
+  const btn=e.target.closest('.filter-tab');if(!btn)return;
+  document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  currentFilter=btn.dataset.f;
+  renderTable();
+});
+
+// Init
+if(!getTok())showLogin();
+else loadInquiries();
+</script>
+</body>
+</html>
