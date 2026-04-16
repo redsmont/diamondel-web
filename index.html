@@ -154,6 +154,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:17
 .pr-moq{font-family:var(--mono);color:var(--text-muted);font-size:12px;white-space:nowrap}
 .pr-price{font-family:var(--mono);color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
 .pr-breaks{display:inline-block;margin-left:6px;font-size:10px;font-weight:400;color:var(--text-subtle);background:var(--bg-soft);border:1px solid var(--border-soft);border-radius:4px;padding:1px 5px;vertical-align:middle;cursor:help}
+.own-tag{display:inline-block;margin-left:8px;padding:2px 8px;background:#10b981;color:#fff;font-size:10px;font-weight:600;border-radius:980px;letter-spacing:0.02em;vertical-align:middle;line-height:1.4}
+.pr-own td{background:rgba(16,185,129,0.04)}
+.pr-own:hover td{background:rgba(16,185,129,0.08)!important}
 .pr-qty-in{width:100%;border:1px solid var(--border);border-radius:6px;
   padding:6px 10px;font-size:13px;font-family:var(--mono);
   color:var(--text);outline:none;background:#fff;transition:border-color .15s}
@@ -1014,15 +1017,19 @@ function tableHead(){
 function renderPartRow(p,idx){
   const qty=p.quantity||0;
   const inStock=qty>0;
+  const isOwn=p.source==='inventory';
   const stockTxt=inStock?qty.toLocaleString():(lang==='zh'?'無庫存':'Out');
+  const mfrExtra=p.dateCode?'<div class="pr-pkg">DC '+p.dateCode+'</div>':(p.packageType?'<div class="pr-pkg">'+p.packageType+'</div>':'');
   const moqTxt=(p.moq||1)+(p.leadWeeks?' · '+p.leadWeeks+'W':'');
   const breaks=p.priceBreaks||[];
+  const priceVal=isOwn&&ADMIN?(p.cost?fmtPrice(p.cost,p.currency||'USD'):'—'):fmtPrice(p.unitPrice,p.currency);
   const priceTitle=breaks.length?breaks.map(b=>b.qty+': '+fmtPrice(b.price,p.currency)).join(' | '):'';
-  const priceCell=ADMIN?'<td class="pr-price" title="'+priceTitle+'">'+fmtPrice(p.unitPrice,p.currency)+(breaks.length>1?'<span class="pr-breaks">'+breaks.length+(lang==='zh'?' 階':' tiers')+'</span>':'')+'</td>':'';
-  return '<tr class="pr-row'+(inStock?'':' pr-out')+'">'+
+  const priceCell=ADMIN?'<td class="pr-price" title="'+priceTitle+'">'+priceVal+(breaks.length>1?'<span class="pr-breaks">'+breaks.length+(lang==='zh'?' 階':' tiers')+'</span>':'')+'</td>':'';
+  const ownTag=isOwn?'<span class="own-tag">'+(lang==='zh'?'現貨':'In-Stock')+'</span>':'';
+  return '<tr class="pr-row'+(inStock?'':' pr-out')+(isOwn?' pr-own':'')+'">'+
     '<td class="pr-chk"><input type="checkbox" class="pr-sel" data-idx="'+idx+'"'+(inStock?'':' disabled')+'></td>'+
-    '<td class="pr-pn">'+(p.partNumber||'')+'</td>'+
-    '<td class="pr-mfr">'+(p.manufacturer||'')+(p.packageType?'<div class="pr-pkg">'+p.packageType+'</div>':'')+'</td>'+
+    '<td class="pr-pn">'+(p.partNumber||'')+ownTag+'</td>'+
+    '<td class="pr-mfr">'+(p.manufacturer||'')+mfrExtra+'</td>'+
     '<td class="pr-stock'+(inStock?' pr-instock':'')+'">'+stockTxt+'</td>'+
     '<td class="pr-moq">'+moqTxt+'</td>'+
     priceCell+

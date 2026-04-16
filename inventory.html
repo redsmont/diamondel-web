@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>庫存管理 | SDIAMOND 後台</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#f97316;--orange2:#ea6c0a;
+  --bg:#fff;--bg-soft:#f5f5f7;--bg-tint:#fafafc;
+  --border:#d2d2d7;--border-soft:#e8e8ed;
+  --text:#1d1d1f;--text-muted:rgba(0,0,0,0.72);--text-subtle:rgba(0,0,0,0.48);
+  --green:#10b981;--red:#ef4444;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','Helvetica Neue','Noto Sans TC',Helvetica,Arial,sans-serif;
+  --mono:'SF Mono',ui-monospace,Menlo,Monaco,monospace;
+}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{font-family:var(--font);background:var(--bg-soft);color:var(--text);font-size:15px;line-height:1.47;letter-spacing:-0.022em;min-height:100vh}
+
+.topbar{background:rgba(255,255,255,0.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid rgba(0,0,0,0.08);height:56px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:10}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-logo{width:32px;height:32px;border-radius:7px;object-fit:contain}
+.topbar-title{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.01em}
+.topbar-badge{margin-left:8px;padding:2px 8px;background:var(--red);color:#fff;font-size:10px;font-weight:700;border-radius:4px;letter-spacing:.5px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-link{color:var(--text-muted);font-size:13px;text-decoration:none;padding:6px 10px;border-radius:6px;transition:color .15s}
+.topbar-link:hover{color:var(--text)}
+.btn-logout{background:transparent;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;font-family:var(--font);padding:6px 10px;letter-spacing:-0.01em}
+.btn-logout:hover{color:var(--red)}
+
+main{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+h1{font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin-bottom:8px}
+.subtitle{font-size:17px;color:var(--text-muted);margin-bottom:32px;letter-spacing:-0.015em}
+
+.card{background:#fff;border-radius:18px;padding:28px;margin-bottom:20px}
+.card-title{font-size:19px;font-weight:600;margin-bottom:6px;letter-spacing:-0.02em}
+.card-sub{font-size:14px;color:var(--text-muted);margin-bottom:20px;letter-spacing:-0.01em}
+
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:40px;
+  text-align:center;transition:border-color .2s,background .2s;cursor:pointer;background:var(--bg-tint)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--orange);background:rgba(249,115,22,0.04)}
+.upload-icon{font-size:40px;margin-bottom:12px}
+.upload-text{font-size:15px;color:var(--text);font-weight:500;margin-bottom:4px}
+.upload-hint{font-size:13px;color:var(--text-muted)}
+.upload-zone input[type=file]{display:none}
+.file-chip{display:inline-flex;align-items:center;gap:8px;background:var(--bg-soft);
+  border-radius:980px;padding:6px 14px;font-size:13px;margin-top:12px}
+.file-chip-x{cursor:pointer;color:var(--text-subtle);font-size:16px;line-height:1}
+.file-chip-x:hover{color:var(--red)}
+
+.btn{background:var(--orange);color:#fff;border:none;border-radius:980px;
+  padding:11px 24px;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font);
+  transition:background .2s;letter-spacing:-0.01em}
+.btn:hover{background:var(--orange2)}
+.btn:disabled{background:rgba(0,0,0,0.2);cursor:not-allowed}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red);padding:9px 20px}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border);padding:9px 20px}
+.btn-ghost:hover{background:rgba(0,0,0,0.04);color:var(--text)}
+.btn-row{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
+
+.msg{padding:12px 16px;border-radius:11px;font-size:14px;margin-top:12px;letter-spacing:-0.01em}
+.msg-ok{background:rgba(16,185,129,0.1);color:#065f46}
+.msg-err{background:rgba(239,68,68,0.1);color:#991b1b}
+
+.table-wrap{overflow-x:auto;margin-top:16px}
+.inv-table{width:100%;border-collapse:collapse;font-size:13px}
+.inv-table th{background:var(--bg-soft);padding:10px 12px;text-align:left;
+  font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;
+  border-bottom:1px solid var(--border);white-space:nowrap}
+.inv-table td{padding:10px 12px;border-bottom:1px solid rgba(0,0,0,0.06);letter-spacing:-0.005em;vertical-align:middle}
+.inv-table tr:hover td{background:var(--bg-tint)}
+.inv-table .pn{font-family:var(--mono);font-weight:500}
+.inv-table .num{font-family:var(--mono);text-align:right}
+.inv-meta{font-size:12px;color:var(--text-muted);margin-bottom:8px;letter-spacing:-0.01em}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(20px) saturate(180%);
+  z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:360px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,0.2)}
+.modal h2{font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:6px}
+.modal p{font-size:13px;color:var(--text-muted);margin-bottom:18px;letter-spacing:-0.01em}
+.modal input[type=password]{width:100%;border:1px solid transparent;background:var(--bg-soft);
+  border-radius:11px;padding:12px 14px;font-size:15px;color:var(--text);letter-spacing:-0.01em;
+  outline:none;font-family:var(--font);transition:border-color .15s,box-shadow .15s}
+.modal input[type=password]:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(249,115,22,0.15)}
+.modal .btn{width:100%;margin-top:14px;padding:13px}
+.modal .err-msg{color:var(--red);font-size:12px;margin-top:8px;display:none;letter-spacing:-0.01em}
+
+.schema{background:var(--bg-soft);border-radius:11px;padding:14px 16px;margin-top:12px;font-size:12px;color:var(--text-muted);line-height:1.6;letter-spacing:-0.01em}
+.schema code{font-family:var(--mono);color:var(--text);background:#fff;padding:1px 6px;border-radius:4px}
+
+.empty{padding:40px 20px;text-align:center;color:var(--text-subtle);font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <img class="topbar-logo" src="logo.png" alt="SDIAMOND">
+    <span class="topbar-title">SDIAMOND 後台</span>
+    <span class="topbar-badge">ADMIN</span>
+  </div>
+  <div class="topbar-right">
+    <a class="topbar-link" href="admin.html">← 回搜尋</a>
+    <button class="btn-logout" onclick="logout()">登出</button>
+  </div>
+</div>
+
+<main>
+  <h1>庫存管理</h1>
+  <p class="subtitle">上傳 CSV 匯入自家現貨，搜尋時會自動合併 Digi-Key、Mouser 與自家庫存。</p>
+
+  <div class="card">
+    <div class="card-title">上傳 CSV</div>
+    <div class="card-sub">上傳後會<b>覆蓋</b>原有庫存。請確認你的 CSV 含 header 列。</div>
+    <label class="upload-zone" id="drop-zone">
+      <div class="upload-icon">📦</div>
+      <div class="upload-text" id="zone-text">點擊選擇檔案，或把 CSV 拖曳到這裡</div>
+      <div class="upload-hint">支援格式：.csv（UTF-8 編碼）</div>
+      <input type="file" id="csv-file" accept=".csv,text/csv">
+    </label>
+    <div id="file-preview"></div>
+    <div class="btn-row">
+      <button class="btn" id="upload-btn" onclick="doUpload()" disabled>匯入</button>
+      <button class="btn-ghost btn" onclick="clearFile()">重選</button>
+    </div>
+    <div id="upload-msg"></div>
+    <div class="schema">
+      <b>預期 header（順序可不同，程式自動對應）：</b><br>
+      <code>Part No, Mfg, D/C, Qty, Cost(USD), Date年/月/日, DESCRIPE, SUPPLY, 料號</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">目前庫存</div>
+    <div class="card-sub" id="inv-meta">—</div>
+    <div class="btn-row">
+      <button class="btn-ghost btn" onclick="loadInventory()">重新整理</button>
+      <button class="btn-danger btn" onclick="doClear()">清空全部</button>
+    </div>
+    <div class="table-wrap">
+      <table class="inv-table" id="inv-table">
+        <thead>
+          <tr>
+            <th>料號 / Part No</th>
+            <th>廠牌 Mfg</th>
+            <th>D/C</th>
+            <th class="num">數量</th>
+            <th class="num">成本 (USD)</th>
+            <th>供應商</th>
+            <th>入庫日</th>
+            <th>內部料號</th>
+            <th>描述</th>
+          </tr>
+        </thead>
+        <tbody id="inv-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="login-overlay">
+  <div class="modal">
+    <h2>🔒 後台登入</h2>
+    <p>請輸入管理密碼</p>
+    <input type="password" id="pw" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn" id="login-btn" onclick="doLogin()">登入</button>
+    <div class="err-msg" id="err">密碼錯誤</div>
+  </div>
+</div>
+
+<script>
+const API_BASE='https://diamondel-api.vercel.app';
+const KEY='diamondelAdminToken';
+function getTok(){return localStorage.getItem(KEY)||'';}
+let pendingFile=null;
+
+function showLogin(){document.getElementById('login-overlay').classList.add('open');setTimeout(()=>document.getElementById('pw').focus(),80);}
+function hideLogin(){document.getElementById('login-overlay').classList.remove('open');}
+
+async function doLogin(){
+  const pw=document.getElementById('pw').value;
+  const err=document.getElementById('err');
+  const btn=document.getElementById('login-btn');
+  if(!pw){err.textContent='請輸入密碼';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='驗證中...';err.style.display='none';
+  try{
+    const r=await fetch(API_BASE+'/inventory',{headers:{'x-admin-token':pw}});
+    if(r.ok){
+      localStorage.setItem(KEY,pw);
+      document.getElementById('pw').value='';
+      hideLogin();
+      loadInventory();
+    } else if(r.status===401){
+      err.textContent='密碼錯誤，請重試';err.style.display='block';
+    } else if(r.status===503){
+      // KV not configured — still admin, just no data
+      localStorage.setItem(KEY,pw);
+      document.getElementById('pw').value='';
+      hideLogin();
+      const j=await r.json();
+      document.getElementById('inv-meta').textContent='⚠️ '+j.error;
+    } else {
+      err.textContent='伺服器錯誤（'+r.status+'）';err.style.display='block';
+    }
+  } catch(e){err.textContent='連線失敗';err.style.display='block';}
+  btn.disabled=false;btn.textContent='登入';
+}
+
+function logout(){localStorage.removeItem(KEY);showLogin();}
+
+async function loadInventory(){
+  const tok=getTok();
+  if(!tok)return showLogin();
+  try{
+    const r=await fetch(API_BASE+'/inventory',{headers:{'x-admin-token':tok}});
+    if(r.status===401){logout();return;}
+    const j=await r.json();
+    if(r.status===503){
+      document.getElementById('inv-meta').innerHTML='⚠️ '+j.error+'<br><small>前往 Vercel → Storage → 建立 Redis / KV → 連結到 diamondel-api，環境變數會自動填入。</small>';
+      document.getElementById('inv-tbody').innerHTML='';
+      return;
+    }
+    renderInventory(j);
+  } catch(e){
+    document.getElementById('inv-meta').textContent='載入失敗：'+e.message;
+  }
+}
+
+function renderInventory(data){
+  const meta=document.getElementById('inv-meta');
+  const tbody=document.getElementById('inv-tbody');
+  const items=data.items||[];
+  const updated=data.updatedAt?new Date(data.updatedAt).toLocaleString('zh-TW'):'—';
+  meta.textContent='共 '+items.length+' 筆　｜　最後更新：'+updated;
+  if(items.length===0){
+    tbody.innerHTML='<tr><td colspan="9" class="empty">尚無庫存資料，請先上傳 CSV</td></tr>';
+    return;
+  }
+  tbody.innerHTML=items.map(p=>'<tr>'+
+    '<td class="pn">'+esc(p.partNumber)+'</td>'+
+    '<td>'+esc(p.manufacturer)+'</td>'+
+    '<td>'+esc(p.dateCode)+'</td>'+
+    '<td class="num">'+(p.quantity||0).toLocaleString()+'</td>'+
+    '<td class="num">'+(p.cost?'$'+Number(p.cost).toFixed(4).replace(/\.?0+$/,''):'—')+'</td>'+
+    '<td>'+esc(p.supplier)+'</td>'+
+    '<td>'+esc(p.dateLogged)+'</td>'+
+    '<td>'+esc(p.internalPn)+'</td>'+
+    '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.description)+'</td>'+
+    '</tr>').join('');
+}
+
+function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// File handling
+const drop=document.getElementById('drop-zone');
+const fileIn=document.getElementById('csv-file');
+fileIn.addEventListener('change',e=>setFile(e.target.files[0]));
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)setFile(f);});
+
+function setFile(f){
+  if(!f)return;
+  if(!/\.csv$/i.test(f.name)&&f.type!=='text/csv'){alert('請選 .csv 檔');return;}
+  pendingFile=f;
+  document.getElementById('file-preview').innerHTML='<div class="file-chip">📄 '+esc(f.name)+' ('+(f.size/1024).toFixed(1)+' KB)<span class="file-chip-x" onclick="clearFile()">×</span></div>';
+  document.getElementById('upload-btn').disabled=false;
+  document.getElementById('zone-text').textContent='已選擇，下方點「匯入」送出';
+}
+
+function clearFile(){
+  pendingFile=null;
+  fileIn.value='';
+  document.getElementById('file-preview').innerHTML='';
+  document.getElementById('upload-btn').disabled=true;
+  document.getElementById('zone-text').textContent='點擊選擇檔案，或把 CSV 拖曳到這裡';
+  document.getElementById('upload-msg').innerHTML='';
+}
+
+async function doUpload(){
+  if(!pendingFile)return;
+  const btn=document.getElementById('upload-btn');
+  const msg=document.getElementById('upload-msg');
+  btn.disabled=true;btn.textContent='匯入中...';
+  msg.innerHTML='';
+  try{
+    const text=await pendingFile.text();
+    const r=await fetch(API_BASE+'/inventory',{
+      method:'POST',
+      headers:{'Content-Type':'text/csv','x-admin-token':getTok()},
+      body:text
+    });
+    const j=await r.json();
+    if(r.ok){
+      msg.innerHTML='<div class="msg msg-ok">✓ 匯入成功，共 '+j.count+' 筆</div>';
+      clearFile();
+      loadInventory();
+    } else {
+      msg.innerHTML='<div class="msg msg-err">✗ '+(j.error||'匯入失敗')+'</div>';
+    }
+  } catch(e){
+    msg.innerHTML='<div class="msg msg-err">✗ '+e.message+'</div>';
+  }
+  btn.disabled=false;btn.textContent='匯入';
+}
+
+async function doClear(){
+  if(!confirm('確定要清空所有庫存資料？此動作無法還原。'))return;
+  try{
+    const r=await fetch(API_BASE+'/inventory',{method:'DELETE',headers:{'x-admin-token':getTok()}});
+    if(r.ok){loadInventory();}
+    else{alert('清空失敗');}
+  } catch(e){alert(e.message);}
+}
+
+// Init
+if(!getTok())showLogin();
+else loadInventory();
+</script>
+</body>
+</html>
