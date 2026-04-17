@@ -68,6 +68,8 @@ h1{font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin
 .status-quoted{background:rgba(0,113,227,0.12);color:#0050a0}
 .status-won{background:rgba(16,185,129,0.12);color:#065f46}
 .status-closed{background:rgba(100,116,139,0.12);color:#334155}
+.status-transferred{background:rgba(249,115,22,0.12);color:#c2410c}
+.sel-chk{width:16px;height:16px;cursor:pointer;accent-color:var(--orange)}
 
 .empty{padding:60px 20px;text-align:center;color:var(--text-subtle);font-size:14px}
 
@@ -161,9 +163,11 @@ h1{font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin
       <button class="filter-tab" data-f="quoted">已報價 <span class="tab-count" id="c-quoted">0</span></button>
       <button class="filter-tab" data-f="won">已成交 <span class="tab-count" id="c-won">0</span></button>
       <button class="filter-tab" data-f="closed">已關閉 <span class="tab-count" id="c-closed">0</span></button>
+      <button class="filter-tab" data-f="transferred">待報價 <span class="tab-count" id="c-transferred">0</span></button>
     </div>
     <div class="toolbar-right">
       <button class="btn-ghost" onclick="loadInquiries()">重新整理</button>
+      <button class="btn" onclick="batchTransfer()" id="transfer-btn" style="display:none">轉採購 (<span id="sel-count">0</span>)</button>
       <button class="btn-ghost" onclick="exportCsv()">匯出 CSV</button>
     </div>
   </div>
@@ -173,7 +177,8 @@ h1{font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin
       <table class="inq-table" id="inq-table">
         <thead>
           <tr>
-            <th style="width:150px">時間</th>
+            <th style="width:36px"><input type="checkbox" id="sel-all" onchange="toggleAll(this.checked)"></th>
+            <th style="width:140px">時間</th>
             <th>客戶</th>
             <th>聯絡</th>
             <th>料號</th>
@@ -216,6 +221,7 @@ h1{font-size:32px;font-weight:600;letter-spacing:-0.025em;line-height:1.1;margin
         <button class="status-btn" data-s="quoted" onclick="setStatus('quoted')">已報價</button>
         <button class="status-btn" data-s="won" onclick="setStatus('won')">已成交</button>
         <button class="status-btn" data-s="closed" onclick="setStatus('closed')">已關閉</button>
+        <button class="status-btn" data-s="transferred" onclick="setStatus('transferred')">待報價</button>
       </div>
 
       <div class="section-h">內部備註（業務用，不會給客戶看）</div>
@@ -250,7 +256,7 @@ let allInquiries=[];
 let currentFilter='';
 let currentInquiry=null;
 
-const STATUS_LABEL={pending:'待回覆',quoted:'已報價',won:'已成交',closed:'已關閉'};
+const STATUS_LABEL={pending:'待回覆',quoted:'已報價',won:'已成交',closed:'已關閉',transferred:'待報價'};
 
 function showLogin(){document.getElementById('login-ov').classList.add('open');setTimeout(()=>document.getElementById('pw').focus(),80);}
 function hideLogin(){document.getElementById('login-ov').classList.remove('open');}
@@ -298,7 +304,7 @@ async function loadInquiries(){
 
 function updateCounts(){
   document.getElementById('c-all').textContent=allInquiries.length;
-  ['pending','quoted','won','closed'].forEach(s=>{
+  ['pending','quoted','won','closed','transferred'].forEach(s=>{
     document.getElementById('c-'+s).textContent=allInquiries.filter(i=>i.status===s).length;
   });
 }
@@ -307,7 +313,7 @@ function renderTable(){
   const tbody=document.getElementById('inq-tbody');
   const list=currentFilter?allInquiries.filter(i=>i.status===currentFilter):allInquiries;
   if(list.length===0){
-    tbody.innerHTML='<tr><td colspan="5" class="empty">'+(currentFilter?'此狀態無資料':'目前沒有詢價')+'</td></tr>';
+    tbody.innerHTML='<tr><td colspan="6" class="empty">'+(currentFilter?'此狀態無資料':'目前沒有詢價')+'</td></tr>';
     return;
   }
   tbody.innerHTML=list.map(i=>{
@@ -316,12 +322,14 @@ function renderTable(){
     const timeTxt=t.toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
     const parts=(i.parts||[]).map(p=>'<span class="parts-chip">'+esc(p.pn||p.partNumber)+(p.qty?' × '+Number(p.qty).toLocaleString():'')+'</span>').join('')||'<span style="color:var(--text-subtle)">—</span>';
     const contactLine=[c.email,c.phone].filter(Boolean).join('<br>')||'—';
-    return '<tr onclick="openDetail(\''+i.id+'\')">'+
-      '<td class="col-time">'+timeTxt+'</td>'+
+    const canSel=i.status!=='transferred';
+    return '<tr>'+
+      '<td><input type="checkbox" class="sel-chk" data-id="'+i.id+'"'+(canSel?'':' disabled')+' onchange="updateSelCount()"></td>'+
+      '<td class="col-time" onclick="openDetail(\''+i.id+'\')">'+timeTxt+'</td>'+
       '<td class="col-company">'+esc(c.company||'—')+'<div class="col-sub">'+esc(c.name||'')+'</div></td>'+
       '<td>'+contactLine+'</td>'+
       '<td class="col-parts">'+parts+'</td>'+
-      '<td class="col-status"><span class="status-pill status-'+i.status+'">'+STATUS_LABEL[i.status]+'</span></td>'+
+      '<td class="col-status" onclick="openDetail(\''+i.id+'\')"><span class="status-pill status-'+i.status+'">'+STATUS_LABEL[i.status]+'</span></td>'+
       '</tr>';
   }).join('');
 }
@@ -472,6 +480,45 @@ document.getElementById('tabs').addEventListener('click',e=>{
   currentFilter=btn.dataset.f;
   renderTable();
 });
+
+// Batch select + transfer
+function toggleAll(checked){
+  document.querySelectorAll('.sel-chk:not(:disabled)').forEach(c=>{c.checked=checked;});
+  updateSelCount();
+}
+function updateSelCount(){
+  const n=document.querySelectorAll('.sel-chk:checked').length;
+  document.getElementById('sel-count').textContent=n;
+  document.getElementById('transfer-btn').style.display=n>0?'':'none';
+  document.getElementById('sel-all').indeterminate=n>0&&n<document.querySelectorAll('.sel-chk:not(:disabled)').length;
+}
+async function batchTransfer(){
+  const ids=[...document.querySelectorAll('.sel-chk:checked')].map(c=>c.dataset.id);
+  if(ids.length===0)return;
+  const companies=ids.map(id=>{const i=allInquiries.find(x=>x.id===id);return i?(i.contact||{}).company||'—':'—';}).filter((v,i,a)=>a.indexOf(v)===i);
+  if(!confirm('確定要轉採購 '+ids.length+' 筆詢價？\n\n客戶：'+companies.join('、')+'\n\n轉入後狀態變為「待報價」，採購 Laura/Vicky 會在 CRM 看到新需求。'))return;
+  const btn=document.getElementById('transfer-btn');
+  btn.disabled=true;btn.textContent='轉入中...';
+  try{
+    const r=await fetch(API_BASE+'/transfer',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':getTok()},
+      body:JSON.stringify({ids})
+    });
+    const j=await r.json();
+    if(r.ok){
+      alert('轉入成功！\n\n'+j.transferred+' 筆已轉入 CRM（共 '+j.total+' 筆需求）'+(j.skipped?' / '+j.skipped+' 筆跳過（已轉過）':''));
+      loadInquiries();
+    } else {
+      alert('轉入失敗：'+(j.error||r.status));
+    }
+  } catch(e){
+    alert('連線失敗：'+e.message);
+  }
+  btn.disabled=false;btn.textContent='轉採購 (0)';
+  document.getElementById('sel-all').checked=false;
+  updateSelCount();
+}
 
 // Init
 if(!getTok())showLogin();
