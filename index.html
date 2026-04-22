@@ -1017,18 +1017,27 @@ function renderPartRow(p,idx){
   const qty=p.quantity||0;
   const inStock=qty>0;
   const isOwn=p.source==='inventory';
-  const stockTxt=inStock?qty.toLocaleString():(lang==='zh'?'無庫存':'Out');
+  // 自家庫存：客戶端不顯示現貨數量，只顯示「可供貨」
+  let stockTxt;
+  if(isOwn && !ADMIN){
+    stockTxt=lang==='zh'?'可供貨':'Available';
+  } else {
+    stockTxt=inStock?qty.toLocaleString():(lang==='zh'?'無庫存':'Out');
+  }
   const mfrExtra=p.dateCode?'<div class="pr-pkg">DC '+p.dateCode+'</div>':(p.packageType?'<div class="pr-pkg">'+p.packageType+'</div>':'');
   const moqTxt=(p.moq||1)+(p.leadWeeks?' · '+p.leadWeeks+'W':'');
   const breaks=p.priceBreaks||[];
   const priceVal=isOwn&&ADMIN?(p.cost?fmtPrice(p.cost,p.currency||'USD'):'—'):fmtPrice(p.unitPrice,p.currency);
   const priceTitle=breaks.length?breaks.map(b=>b.qty+': '+fmtPrice(b.price,p.currency)).join(' | '):'';
   const priceCell=ADMIN?'<td class="pr-price" title="'+priceTitle+'">'+priceVal+(breaks.length>1?'<span class="pr-breaks">'+breaks.length+(lang==='zh'?' 階':' tiers')+'</span>':'')+'</td>':'';
-  const ownTag=isOwn?'<span class="own-tag">'+(lang==='zh'?'現貨':'In-Stock')+'</span>':'';
+  // 自家庫存：客戶端不顯示「現貨」標籤，改成「詢價」
+  const ownTag=isOwn?(ADMIN?'<span class="own-tag">'+(lang==='zh'?'自有':'OWN')+'</span>':'<span class="own-tag" style="background:rgba(59,130,246,0.15);color:#60a5fa;border-color:rgba(59,130,246,0.25)">'+(lang==='zh'?'詢價':'RFQ')+'</span>'):'';
+  // 不顯示 source 給客戶
+  const sourceLabel=ADMIN&&p.source?'<br><span style="font-size:10px;color:rgba(255,255,255,0.3)">'+p.source+'</span>':'';
   return '<tr class="pr-row'+(inStock?'':' pr-out')+(isOwn?' pr-own':'')+'">'+
     '<td class="pr-chk"><input type="checkbox" class="pr-sel" data-idx="'+idx+'"'+(inStock?'':' disabled')+'></td>'+
     '<td class="pr-pn">'+(p.partNumber||'')+ownTag+'</td>'+
-    '<td class="pr-mfr">'+(p.manufacturer||'')+mfrExtra+'</td>'+
+    '<td class="pr-mfr">'+(p.manufacturer||'')+mfrExtra+sourceLabel+'</td>'+
     '<td class="pr-stock'+(inStock?' pr-instock':'')+'">'+stockTxt+'</td>'+
     '<td class="pr-moq">'+moqTxt+'</td>'+
     priceCell+
