@@ -460,6 +460,12 @@ body.en .zh-block{display:none}
     <button class="nav-link" onclick="scrollToSec('contact')">
       <span data-zh>聯絡</span><span data-en>Contact</span>
     </button>
+    <a class="nav-link" id="nav-inventory" href="inventory.html" style="display:none;color:#f97316;font-weight:500">
+      📦 <span data-zh>庫存管理</span><span data-en>Inventory</span>
+    </a>
+    <a class="nav-link" id="nav-inquiries" href="inquiries.html" style="display:none;color:#f97316;font-weight:500">
+      📨 <span data-zh>詢價管理</span><span data-en>Inquiries</span>
+    </a>
     <div class="nav-auth" id="nav-auth">
       <button class="btn-login" onclick="openModal('login')">
         <span data-zh>登入</span><span data-en>Login</span>
@@ -1349,6 +1355,7 @@ function adminLogin(){
         localStorage.setItem(ADMIN_TOKEN_KEY,pw);
         document.getElementById('admin-login-overlay').classList.remove('open');
         document.getElementById('admin-pw').value='';
+        showAdminNav();
       } else {
         errEl.textContent='密碼錯誤，請重試';errEl.style.display='block';
       }
@@ -1357,8 +1364,21 @@ function adminLogin(){
     .finally(()=>{btn.disabled=false;btn.textContent='登入';});
 }
 
+function showAdminNav(){
+  const inv=document.getElementById('nav-inventory');
+  const inq=document.getElementById('nav-inquiries');
+  const badge=document.getElementById('admin-badge');
+  if(inv) inv.style.display='inline-flex';
+  if(inq) inq.style.display='inline-flex';
+  if(badge) badge.style.display='inline';
+}
+
 function adminLogout(){
   localStorage.removeItem(ADMIN_TOKEN_KEY);
+  const inv=document.getElementById('nav-inventory');
+  const inq=document.getElementById('nav-inquiries');
+  if(inv) inv.style.display='none';
+  if(inq) inq.style.display='none';
   if(ADMIN)document.getElementById('admin-login-overlay').classList.add('open');
 }
 
@@ -1366,9 +1386,9 @@ function adminLogout(){
 document.addEventListener('DOMContentLoaded',function(){
   setLang('zh');
   if(ADMIN){
-    const b=document.getElementById('admin-badge');
-    if(b)b.style.display='inline-block';
-    if(!getAdminToken()){
+    if(getAdminToken()){
+      showAdminNav();
+    } else {
       document.getElementById('admin-login-overlay').classList.add('open');
       setTimeout(()=>document.getElementById('admin-pw').focus(),100);
     }
