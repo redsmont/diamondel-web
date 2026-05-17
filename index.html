@@ -826,21 +826,22 @@ body.en .zh-block{display:none}
         </div>
         <div id="register-fields" style="display:none">
           <div class="f2col">
-            <div class="fr"><label><span data-zh>公司名稱</span><span data-en>Company</span> *</label><input type="text" placeholder="Company"></div>
-            <div class="fr"><label><span data-zh>聯絡人</span><span data-en>Name</span> *</label><input type="text" placeholder="Name"></div>
+            <div class="fr"><label><span data-zh>公司名稱</span><span data-en>Company</span> *</label><input type="text" placeholder="Company" id="reg-company"></div>
+            <div class="fr"><label><span data-zh>聯絡人</span><span data-en>Name</span> *</label><input type="text" placeholder="Name" id="reg-name"></div>
           </div>
-          <div class="fr"><label>Email *</label><input type="email" placeholder="you@company.com"></div>
+          <div class="fr"><label>Email *</label><input type="email" placeholder="you@company.com" id="reg-email"></div>
           <div class="f2col">
             <div class="fr">
               <label><span data-zh>密碼</span><span data-en>Password</span> *</label>
-              <input type="password" placeholder="••••••••">
+              <input type="password" placeholder="••••••••" id="reg-pw">
             </div>
             <div class="fr">
               <label><span data-zh>確認密碼</span><span data-en>Confirm</span> *</label>
-              <input type="password" placeholder="••••••••">
+              <input type="password" placeholder="••••••••" id="reg-pw2">
             </div>
           </div>
-          <div class="fr"><label><span data-zh>電話</span><span data-en>Phone</span></label><input type="tel" placeholder="+886-2-xxxx-xxxx"></div>
+          <div class="fr"><label><span data-zh>電話</span><span data-en>Phone</span></label><input type="tel" placeholder="+886-2-xxxx-xxxx" id="reg-phone"></div>
+          <div id="reg-err" style="display:none;color:#ef4444;font-size:12px;margin-bottom:8px"></div>
           <button class="form-submit-modal" onclick="doRegister()">
             <span data-zh>建立帳號</span><span data-en>Create Account</span>
           </button>
@@ -1212,22 +1213,82 @@ function switchTab(tab){
   document.getElementById('auth-form-wrap').style.display='';
 }
 
-function doLogin(){
-  document.getElementById('auth-form-wrap').style.display='none';
-  document.getElementById('auth-success').style.display='block';
-  document.getElementById('auth-success-title').textContent=lang==='zh'?'歡迎回來！':'Welcome back!';
-  document.getElementById('auth-success-sub').textContent=lang==='zh'?'登入成功，您已進入會員模式':'Login successful';
-  currentUser={name:'會員'};
-  updateNavAuth();
+const MB_URL='https://rdafezhygavyancxpyee.supabase.co';
+const MB_KEY='sb_publishable_Uv4n6-Lo3xSbWowp38GUNg_gjRk_xIF';
+
+async function doLogin(){
+  const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
+  const pw=document.getElementById('login-pw').value;
+  if(!email||!pw){alert(lang==='zh'?'請輸入 Email 和密碼':'Please enter email and password');return;}
+  try{
+    const r=await fetch(MB_URL+'/rest/v1/rpc/verify_member_login',{
+      method:'POST',
+      headers:{'apikey':MB_KEY,'Authorization':'Bearer '+MB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p_email:email,p_password:pw})
+    });
+    const d=await r.json();
+    if(d&&d.success){
+      currentUser={name:d.name||d.company||'會員',email:d.email,company:d.company};
+      localStorage.setItem('web_member',JSON.stringify(currentUser));
+      document.getElementById('auth-form-wrap').style.display='none';
+      document.getElementById('auth-success').style.display='block';
+      document.getElementById('auth-success-title').textContent=lang==='zh'?'歡迎回來！':'Welcome back!';
+      document.getElementById('auth-success-sub').textContent=lang==='zh'?'登入成功，'+currentUser.name:'Login successful';
+      updateNavAuth();
+      // 更新 last_login
+      fetch(MB_URL+'/rest/v1/members?email=eq.'+encodeURIComponent(email),{
+        method:'PATCH',headers:{'apikey':MB_KEY,'Authorization':'Bearer '+MB_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({last_login:new Date().toISOString()})
+      }).catch(()=>{});
+    } else {
+      alert(lang==='zh'?'帳號或密碼錯誤':'Invalid email or password');
+    }
+  }catch(e){alert(lang==='zh'?'連線失敗，請稍後再試':'Connection failed');}
 }
-function doRegister(){
-  document.getElementById('auth-form-wrap').style.display='none';
-  document.getElementById('auth-success').style.display='block';
-  document.getElementById('auth-success-title').textContent=lang==='zh'?'帳號建立成功！':'Account Created!';
-  document.getElementById('auth-success-sub').textContent=lang==='zh'?'歡迎加入 Diamondel 會員':'Welcome to Diamondel membership';
-  currentUser={name:'會員'};
-  updateNavAuth();
+
+async function doRegister(){
+  const company=document.getElementById('reg-company').value.trim();
+  const name=document.getElementById('reg-name').value.trim();
+  const email=document.getElementById('reg-email').value.trim().toLowerCase();
+  const pw=document.getElementById('reg-pw').value;
+  const pw2=document.getElementById('reg-pw2').value;
+  const phone=document.getElementById('reg-phone').value.trim();
+  const errEl=document.getElementById('reg-err');
+
+  if(!company||!name){errEl.textContent=lang==='zh'?'請填公司名稱和聯絡人':'Company and name required';errEl.style.display='block';return;}
+  if(!email){errEl.textContent=lang==='zh'?'請填 Email':'Email required';errEl.style.display='block';return;}
+  if(!pw||pw.length<6){errEl.textContent=lang==='zh'?'密碼至少 6 碼':'Password min 6 chars';errEl.style.display='block';return;}
+  if(pw!==pw2){errEl.textContent=lang==='zh'?'密碼不一致':'Passwords do not match';errEl.style.display='block';return;}
+  errEl.style.display='none';
+
+  try{
+    // 用 RPC 註冊（伺服器端 hash 密碼）
+    const r=await fetch(MB_URL+'/rest/v1/rpc/register_member',{
+      method:'POST',
+      headers:{'apikey':MB_KEY,'Authorization':'Bearer '+MB_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({p_email:email,p_password:pw,p_company:company,p_name:name,p_phone:phone||null})
+    });
+    const d=await r.json();
+    if(d&&d.success){
+      currentUser={name:name,email:email,company:company};
+      localStorage.setItem('web_member',JSON.stringify(currentUser));
+      document.getElementById('auth-form-wrap').style.display='none';
+      document.getElementById('auth-success').style.display='block';
+      document.getElementById('auth-success-title').textContent=lang==='zh'?'帳號建立成功！':'Account Created!';
+      document.getElementById('auth-success-sub').textContent=lang==='zh'?'歡迎加入 SDIAMOND 會員':'Welcome to SDIAMOND';
+      updateNavAuth();
+    } else {
+      errEl.textContent=d.error||(lang==='zh'?'註冊失敗，Email 可能已被使用':'Registration failed');
+      errEl.style.display='block';
+    }
+  }catch(e){errEl.textContent=lang==='zh'?'連線失敗':'Connection failed';errEl.style.display='block';}
 }
+
+// 自動恢復登入狀態
+(function(){
+  const saved=localStorage.getItem('web_member');
+  if(saved){try{currentUser=JSON.parse(saved);updateNavAuth();}catch(e){}}
+})();
 
 function updateNavAuth(){
   const nav=document.getElementById('nav-auth');
