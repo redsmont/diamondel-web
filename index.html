@@ -239,6 +239,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:17
   transition:background .15s}
 .inq-btn:hover{background:var(--orange2)}
 
+/* HISTORY MODAL */
+.hist-list{max-height:60vh;overflow-y:auto;padding:4px 0}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px}
+.hist-card{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fff}
+.hist-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hist-date{font-size:12px;color:var(--text-muted)}
+.hist-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:980px}
+.hist-status[data-s="pending"]{background:rgba(249,115,22,0.12);color:#ea580c}
+.hist-status[data-s="quoted"]{background:rgba(59,130,246,0.12);color:#2563eb}
+.hist-status[data-s="won"]{background:rgba(16,185,129,0.12);color:#047857}
+.hist-status[data-s="closed"]{background:rgba(107,114,128,0.12);color:#4b5563}
+.hist-status[data-s="transferred"]{background:rgba(139,92,246,0.12);color:#7c3aed}
+.hist-parts{font-family:var(--mono);font-size:13px;color:var(--text)}
+.hist-parts span{display:block;padding:2px 0}
+.hist-notes{font-size:12px;color:var(--text-muted);margin-top:6px;border-top:1px solid var(--border-soft);padding-top:6px}
+.hist-loading{text-align:center;padding:30px;color:var(--text-muted)}
+
 /* MAIN SECTIONS */
 main{padding-top:0}
 section{padding:100px 24px}
@@ -905,6 +922,19 @@ body.en .zh-block{display:none}
   </div>
 </div>
 
+<!-- HISTORY MODAL -->
+<div class="overlay" id="hist-overlay" onclick="if(event.target===this)closeModal('hist')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <h2><span data-zh>歷史詢價</span><span data-en>Inquiry History</span></h2>
+      <button class="modal-x" onclick="closeModal('hist')">✕</button>
+    </div>
+    <div class="modal-body" id="hist-body">
+      <div class="hist-loading"><span data-zh>載入中...</span><span data-en>Loading...</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- CONTACT SUCCESS MODAL -->
 <div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeModal('contact')">
   <div class="modal" style="max-width:360px">
@@ -1322,9 +1352,34 @@ document.addEventListener('click',function(){
   const w=document.getElementById('user-dd-wrap');
   if(w)w.classList.remove('open');
 });
-function openMemberHistory(){
+async function openMemberHistory(){
   document.getElementById('user-dd-wrap').classList.remove('open');
-  alert(lang==='zh'?'歷史詢價功能開發中':'Inquiry history coming soon');
+  if(!currentUser||!currentUser.email){alert(lang==='zh'?'請先登入':'Please login first');return;}
+  document.getElementById('hist-overlay').classList.add('open');
+  const body=document.getElementById('hist-body');
+  body.innerHTML='<div class="hist-loading">'+(lang==='zh'?'載入中...':'Loading...')+'</div>';
+  try{
+    const r=await fetch(API_BASE+'/inquiry?email='+encodeURIComponent(currentUser.email));
+    const d=await r.json();
+    if(!d.inquiries||d.inquiries.length===0){
+      body.innerHTML='<div class="hist-empty">'+(lang==='zh'?'尚無詢價紀錄':'No inquiries yet')+'</div>';
+      return;
+    }
+    const statusMap={pending:lang==='zh'?'待回覆':'Pending',quoted:lang==='zh'?'已報價':'Quoted',won:lang==='zh'?'成交':'Won',closed:lang==='zh'?'已關閉':'Closed',transferred:lang==='zh'?'已轉採購':'Transferred'};
+    body.innerHTML='<div class="hist-list">'+d.inquiries.map(inq=>{
+      const dt=new Date(inq.createdAt);
+      const dateStr=dt.getFullYear()+'/'+(dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+      const parts=(inq.parts||[]).map(p=>'<span>'+p.pn+(p.qty?' × '+p.qty.toLocaleString():'')+'</span>').join('');
+      return '<div class="hist-card">'+
+        '<div class="hist-head"><span class="hist-date">'+dateStr+'</span>'+
+        '<span class="hist-status" data-s="'+inq.status+'">'+(statusMap[inq.status]||inq.status)+'</span></div>'+
+        (parts?'<div class="hist-parts">'+parts+'</div>':'')+
+        (inq.notes?'<div class="hist-notes">'+inq.notes+'</div>':'')+
+      '</div>';
+    }).join('')+'</div>';
+  }catch(e){
+    body.innerHTML='<div class="hist-empty">'+(lang==='zh'?'載入失敗，請稍後再試':'Failed to load, please try again')+'</div>';
+  }
 }
 function openMemberProfile(){
   document.getElementById('user-dd-wrap').classList.remove('open');
