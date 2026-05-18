@@ -66,6 +66,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:17
 .user-avatar{width:24px;height:24px;background:var(--orange);border-radius:50%;
   display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff}
 .user-name{font-size:12px;color:var(--text);font-weight:500}
+.user-dropdown-wrap{position:relative}
+.user-dropdown{display:none;position:absolute;right:0;top:calc(100% + 6px);
+  background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.12);
+  min-width:160px;padding:6px 0;z-index:999}
+.user-dropdown-wrap.open .user-dropdown{display:block}
+.user-dropdown a,.user-dropdown button{display:flex;align-items:center;gap:8px;width:100%;
+  padding:10px 16px;font-size:13px;color:var(--text);background:none;border:none;
+  cursor:pointer;font-family:var(--font);text-decoration:none;text-align:left}
+.user-dropdown a:hover,.user-dropdown button:hover{background:rgba(0,0,0,0.04)}
+.user-dropdown .dd-divider{height:1px;background:rgba(0,0,0,0.08);margin:4px 0}
 
 /* HERO */
 #hero{min-height:100vh;background:#fff;padding:48px 0 0;
@@ -1287,11 +1297,38 @@ function updateNavAuth(){
   const nav=document.getElementById('nav-auth');
   if(!nav)return;
   if(currentUser){
-    nav.innerHTML='<span style="font-size:12px;color:var(--text-muted);padding:0 10px">'+
-      (lang==='zh'?'👤 ':'👤 ')+currentUser.name+'</span>'+
-      '<button class="btn-login" onclick="doLogout()">'+
-      (lang==='zh'?'登出':'Logout')+'</button>';
+    nav.innerHTML='<div class="user-dropdown-wrap" id="user-dd-wrap">'+
+      '<button class="user-pill" onclick="toggleUserDropdown(event)">'+
+        '<div class="user-avatar">'+currentUser.name.charAt(0)+'</div>'+
+        '<span class="user-name">'+currentUser.name+'</span>'+
+      '</button>'+
+      '<div class="user-dropdown" id="user-dropdown">'+
+        '<a href="javascript:void(0)" onclick="openMemberHistory()">'+
+          '<span>'+(lang==='zh'?'📋 歷史詢價':'📋 Inquiry History')+'</span></a>'+
+        '<a href="javascript:void(0)" onclick="openMemberProfile()">'+
+          '<span>'+(lang==='zh'?'👤 會員資訊':'👤 Profile')+'</span></a>'+
+        '<div class="dd-divider"></div>'+
+        '<button onclick="doLogout()">'+
+          '<span>'+(lang==='zh'?'🚪 登出':'🚪 Logout')+'</span></button>'+
+      '</div>'+
+    '</div>';
   }
+}
+function toggleUserDropdown(e){
+  e.stopPropagation();
+  document.getElementById('user-dd-wrap').classList.toggle('open');
+}
+document.addEventListener('click',function(){
+  const w=document.getElementById('user-dd-wrap');
+  if(w)w.classList.remove('open');
+});
+function openMemberHistory(){
+  document.getElementById('user-dd-wrap').classList.remove('open');
+  alert(lang==='zh'?'歷史詢價功能開發中':'Inquiry history coming soon');
+}
+function openMemberProfile(){
+  document.getElementById('user-dd-wrap').classList.remove('open');
+  alert(lang==='zh'?'會員資訊功能開發中':'Profile coming soon');
 }
 
 function doLogout(){
