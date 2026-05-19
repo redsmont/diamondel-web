@@ -1129,7 +1129,7 @@ function renderPartRow(p,idx){
     stockTxt=inStock?qty.toLocaleString():(lang==='zh'?'無庫存':'Out');
   }
   const mfrExtra=p.dateCode?'<div class="pr-pkg">DC '+p.dateCode+'</div>':(p.packageType?'<div class="pr-pkg">'+p.packageType+'</div>':'');
-  const moqTxt=(p.moq||1)+(p.leadWeeks?' · '+p.leadWeeks+'W':'');
+  const moqTxt=(p.moq||1)+(p.leadWeeks?' · '+p.leadWeeks+(lang==='zh'?'週':'W'):'');
   const breaks=p.priceBreaks||[];
   const priceVal=isOwn&&ADMIN?(p.cost?fmtPrice(p.cost,p.currency||'USD'):'—'):fmtPrice(p.unitPrice,p.currency);
   const priceTitle=breaks.length?breaks.map(b=>b.qty+': '+fmtPrice(b.price,p.currency)).join(' | '):'';
