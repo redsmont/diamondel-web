@@ -590,7 +590,7 @@ body.en .zh-block{display:none}
           <div class="svc-desc"><span data-zh>料號缺貨時，提供規格相符的替代料，確保生產不中斷</span><span data-en>When parts are unavailable, we source compatible alternatives</span></div>
         </div>
       </div>
-      <div class="svc-card">
+      <div class="svc-card" style="cursor:pointer" onclick="openModal('bom')">
         <div class="svc-img" style="background-image:url('https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=800&q=80&auto=format&fit=crop')"></div>
         <div class="svc-body">
           <div class="svc-title"><span data-zh>BOM 批次詢價</span><span data-en>BOM Inquiry</span></div>
@@ -935,6 +935,76 @@ body.en .zh-block{display:none}
   </div>
 </div>
 
+<!-- BOM MODAL -->
+<div class="overlay" id="bom-overlay" onclick="if(event.target===this)closeModal('bom')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head">
+      <h2><span data-zh>BOM 批次詢價</span><span data-en>BOM Batch Inquiry</span></h2>
+      <button class="modal-x" onclick="closeModal('bom')">✕</button>
+    </div>
+    <div class="modal-body" id="bom-form">
+      <div style="font-size:13px;color:var(--gray4);margin-bottom:14px">
+        <span data-zh>貼上料號清單或上傳 CSV 檔案（支援欄位：料號、數量、品牌）</span>
+        <span data-en>Paste part numbers or upload a CSV file (columns: Part No., Qty, Brand)</span>
+      </div>
+      <div class="fr">
+        <label><span data-zh>貼上料號</span><span data-en>Paste Parts</span></label>
+        <textarea id="bom-text" rows="5" placeholder="LM358N 1000&#10;STM32F103C8T6 500 ST&#10;0805B104K500CT 2000" style="font-family:var(--mono);font-size:13px"></textarea>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--gray3);margin:-8px 0 10px"><span data-zh>— 或 —</span><span data-en>— or —</span></div>
+      <div class="fr">
+        <label style="display:inline-block;padding:8px 18px;background:var(--gray1);border:1px dashed var(--gray2);border-radius:10px;cursor:pointer;font-size:13px">
+          <span data-zh>📎 選擇 CSV 檔案</span><span data-en>📎 Choose CSV</span>
+          <input type="file" id="bom-file" accept=".csv,.txt,.tsv" style="display:none" onchange="parseBomFile(this)">
+        </label>
+        <span id="bom-filename" style="margin-left:8px;font-size:12px;color:var(--gray4)"></span>
+      </div>
+      <button class="form-submit-modal" onclick="parseBomText()" style="margin-bottom:0">
+        <span data-zh>解析料號清單</span><span data-en>Parse Parts List</span>
+      </button>
+    </div>
+    <div id="bom-preview" style="display:none;padding:0 26px 26px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:14px;font-weight:600"><span data-zh>📋 解析結果</span><span data-en>📋 Parsed Parts</span> (<span id="bom-count">0</span>)</div>
+        <button style="background:none;border:none;color:var(--orange);cursor:pointer;font-size:13px" onclick="resetBom()">
+          <span data-zh>← 重新輸入</span><span data-en>← Re-enter</span>
+        </button>
+      </div>
+      <div id="bom-table-wrap" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray2);border-radius:10px;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--gray1);position:sticky;top:0">
+            <th style="text-align:left;padding:8px 10px;font-weight:600"><span data-zh>料號</span><span data-en>Part No.</span></th>
+            <th style="text-align:right;padding:8px 10px;font-weight:600"><span data-zh>數量</span><span data-en>Qty</span></th>
+            <th style="text-align:left;padding:8px 10px;font-weight:600"><span data-zh>品牌</span><span data-en>Brand</span></th>
+            <th style="width:30px"></th>
+          </tr></thead>
+          <tbody id="bom-tbody"></tbody>
+        </table>
+      </div>
+      <div class="f2col">
+        <div class="fr"><label><span data-zh>公司</span><span data-en>Company</span> *</label><input type="text" id="bom-company" placeholder="Company"></div>
+        <div class="fr"><label><span data-zh>姓名</span><span data-en>Name</span> *</label><input type="text" id="bom-name" placeholder="Name"></div>
+      </div>
+      <div class="f2col">
+        <div class="fr"><label>Email *</label><input type="email" id="bom-email" placeholder="you@company.com"></div>
+        <div class="fr"><label><span data-zh>電話</span><span data-en>Phone</span></label><input type="tel" id="bom-phone" placeholder="+886-2-xxxx-xxxx"></div>
+      </div>
+      <div class="fr"><label><span data-zh>需求交期</span><span data-en>Lead Time</span></label><input type="text" id="bom-lead" placeholder="e.g. 2 weeks"></div>
+      <div class="fr"><label><span data-zh>備註</span><span data-en>Notes</span></label><textarea id="bom-notes" placeholder=""></textarea></div>
+      <div id="bom-err" style="display:none;color:#ef4444;font-size:13px;margin:-6px 0 10px"></div>
+      <button class="form-submit" id="bom-submit-btn" onclick="submitBom()">
+        <span data-zh>確認送出</span><span data-en>Submit</span>
+      </button>
+    </div>
+    <div class="success-screen" id="bom-success" style="display:none">
+      <div class="sc-icon">✅</div>
+      <div class="sc-title"><span data-zh>BOM 詢價已送出！</span><span data-en>BOM Inquiry Submitted!</span></div>
+      <div class="sc-sub"><span data-zh>業務將在 2 小時內與您確認報價</span><span data-en>Our team will respond within 2 hours</span></div>
+      <button class="sc-close" onclick="closeModal('bom')"><span data-zh>關閉</span><span data-en>Close</span></button>
+    </div>
+  </div>
+</div>
+
 <!-- CONTACT SUCCESS MODAL -->
 <div class="overlay" id="contact-overlay" onclick="if(event.target===this)closeModal('contact')">
   <div class="modal" style="max-width:360px">
@@ -1224,6 +1294,9 @@ function openModal(type){
     switchTab(type);
   } else if(type==='inq'){
     document.getElementById('inq-overlay').classList.add('open');
+  } else if(type==='bom'){
+    document.getElementById('bom-overlay').classList.add('open');
+    resetBom();
   } else if(type==='contact'){
     document.getElementById('contact-overlay').classList.add('open');
   }
@@ -1233,6 +1306,7 @@ function closeModal(type){
   else if(type==='inq')document.getElementById('inq-overlay').classList.remove('open');
   else if(type==='contact')document.getElementById('contact-overlay').classList.remove('open');
   else if(type==='hist')document.getElementById('hist-overlay').classList.remove('open');
+  else if(type==='bom')document.getElementById('bom-overlay').classList.remove('open');
   else if(type==='line')document.getElementById('line-overlay').classList.remove('open');
 }
 function openLineModal(){document.getElementById('line-overlay').classList.add('open');}
@@ -1487,6 +1561,116 @@ function submitContact(){
     document.getElementById('contact-overlay').classList.add('open');
   });
 }
+
+// ─── BOM 批次詢價 ───
+let bomParts=[];
+
+function parseBomLine(line){
+  line=line.trim();
+  if(!line)return null;
+  // Try CSV split first, then whitespace
+  let cols;
+  if(line.includes(',')){cols=line.split(',').map(s=>s.trim());}
+  else if(line.includes('\t')){cols=line.split('\t').map(s=>s.trim());}
+  else{cols=line.split(/\s+/);}
+  const pn=cols[0]||'';
+  if(!pn)return null;
+  const qty=parseInt(String(cols[1]||'0').replace(/[^\d]/g,''),10)||0;
+  const mfr=cols[2]||'';
+  return{pn,qty,manufacturer:mfr};
+}
+
+function parseBomText(){
+  const raw=document.getElementById('bom-text').value.trim();
+  if(!raw){alert(lang==='zh'?'請先貼上料號清單':'Please paste parts first');return;}
+  const lines=raw.split('\n');
+  bomParts=lines.map(parseBomLine).filter(Boolean);
+  if(!bomParts.length){alert(lang==='zh'?'未解析到料號':'No parts found');return;}
+  showBomPreview();
+}
+
+function parseBomFile(input){
+  const f=input.files[0];
+  if(!f)return;
+  document.getElementById('bom-filename').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const text=e.target.result;
+    const lines=text.split('\n');
+    // Skip header if first line looks like a header
+    const first=lines[0]||'';
+    const skip=/part|pn|料號|品牌|brand|qty|數量/i.test(first)?1:0;
+    bomParts=lines.slice(skip).map(parseBomLine).filter(Boolean);
+    if(!bomParts.length){alert(lang==='zh'?'CSV 中未找到料號':'No parts found in CSV');return;}
+    showBomPreview();
+  };
+  reader.readAsText(f);
+}
+
+function showBomPreview(){
+  document.getElementById('bom-form').style.display='none';
+  document.getElementById('bom-preview').style.display='block';
+  document.getElementById('bom-success').style.display='none';
+  document.getElementById('bom-count').textContent=bomParts.length;
+  const tbody=document.getElementById('bom-tbody');
+  tbody.innerHTML=bomParts.map((p,i)=>
+    '<tr style="border-top:1px solid var(--gray1)">'+
+    '<td style="padding:6px 10px;font-family:var(--mono)">'+esc(p.pn)+'</td>'+
+    '<td style="padding:6px 10px;text-align:right">'+(p.qty||'—')+'</td>'+
+    '<td style="padding:6px 10px">'+esc(p.manufacturer)+'</td>'+
+    '<td style="padding:6px 4px"><button style="background:none;border:none;cursor:pointer;color:#ccc;font-size:14px" onclick="removeBomRow('+i+')">✕</button></td>'+
+    '</tr>').join('');
+  // Pre-fill contact if logged in
+  if(currentUser){
+    if(currentUser.company)document.getElementById('bom-company').value=currentUser.company;
+    if(currentUser.name)document.getElementById('bom-name').value=currentUser.name;
+    if(currentUser.email)document.getElementById('bom-email').value=currentUser.email;
+    if(currentUser.phone)document.getElementById('bom-phone').value=currentUser.phone;
+  }
+}
+
+function removeBomRow(i){
+  bomParts.splice(i,1);
+  if(!bomParts.length){resetBom();return;}
+  showBomPreview();
+}
+
+function resetBom(){
+  bomParts=[];
+  document.getElementById('bom-form').style.display='block';
+  document.getElementById('bom-preview').style.display='none';
+  document.getElementById('bom-success').style.display='none';
+  document.getElementById('bom-text').value='';
+  document.getElementById('bom-file').value='';
+  document.getElementById('bom-filename').textContent='';
+  document.getElementById('bom-err').style.display='none';
+}
+
+function submitBom(){
+  const contact={
+    company:document.getElementById('bom-company').value.trim(),
+    name:document.getElementById('bom-name').value.trim(),
+    email:document.getElementById('bom-email').value.trim(),
+    phone:document.getElementById('bom-phone').value.trim(),
+    leadTime:document.getElementById('bom-lead').value.trim()
+  };
+  const errEl=document.getElementById('bom-err');
+  if(!contact.company||!contact.name){
+    errEl.textContent=lang==='zh'?'請填公司與姓名':'Company and name required';errEl.style.display='block';return;
+  }
+  if(!contact.email&&!contact.phone){
+    errEl.textContent=lang==='zh'?'Email 或電話至少填一個':'Email or phone required';errEl.style.display='block';return;
+  }
+  const notes=document.getElementById('bom-notes').value.trim();
+  postInquiry({contact,parts:bomParts,notes:notes?'[BOM]\n'+notes:'[BOM]',source:'public'},document.getElementById('bom-submit-btn'),errEl,()=>{
+    document.getElementById('bom-preview').style.display='none';
+    document.getElementById('bom-success').style.display='block';
+    ['bom-company','bom-name','bom-email','bom-phone','bom-lead','bom-notes'].forEach(id=>{document.getElementById(id).value='';});
+    bomParts=[];
+  });
+}
+
+function esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 function showDash(){
   // reserved for internal dashboard
