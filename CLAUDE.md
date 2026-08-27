@@ -17,7 +17,7 @@
 
 ## 公司資訊
 - 地址：231039新北市新店區北宜路一段18-5號17樓
-- Email：sale@diamondel.com
+- Email：info@diamondel.com
 - 網站：www.diamondel.com
 
 ## 近期完成事項
