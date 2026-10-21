@@ -1,0 +1,14 @@
+# SDIAMOND 信東電子有限公司 (SDIAMOND Electronics Co., Ltd.)
+
+> 台灣新北市的獨立 IC 經銷商，深耕全球電子零件市場超過二十五年，長期合作客戶 700+ 家。提供全球 IC 現貨即時查詢、工作日 2 小時內報價、缺貨替代料建議、BOM 批次詢價、品質把關（原廠包裝與出廠測試報告）、庫存備料與寄倉服務。
+> Independent IC distributor based in New Taipei City, Taiwan, for over 25 years, serving 700+ manufacturers, system integrators and design houses worldwide.
+
+## 主要頁面 Main pages
+- [首頁：全球 IC 現貨搜尋](https://www.diamondel.com/): 輸入料號即時查詢全球庫存與貨期，送出詢價
+- [常見問題 FAQ](https://www.diamondel.com/faq.html): 現貨查詢、報價時間、替代料、品質、備料服務、聯絡方式
+
+## 聯絡 Contact
+- 電話 Phone: +886-2-2911-8100
+- Email: info@diamondel.com
+- 地址 Address: 231039 新北市新店區北宜路一段18-5號17樓 (17F., No. 18-5, Sec. 1, Beiyi Rd., Xindian Dist., New Taipei City 231039, Taiwan)
+- 服務時間 Hours: 週一至週五 Mon–Fri 09:00–18:00 (UTC+8)
